@@ -1,5 +1,4 @@
 -include rules.mk
-# GMAKE stupidly trims off leading "./" where least appropriate
 export acism ?= .
 
 #---------------- PRIVATE VARS:
@@ -28,9 +27,9 @@ $(acism)/acism_t.pass : $(acism.pgms) $(acism)/words
 $(acism.pgms)   : CPPFLAGS := -I$(acism) $(CPPFLAGS)
 $(acism.pgms)   : $(acism.lib) $(acism)/msutil.o $(acism)/tap.o
 
+$(acism.c:c=i) 	: CPPFLAGS += -I$(acism)
+
 # Include auto-generated depfiles (gcc -MMD):
 -include $(acism)/*.d
-
-%.i : CPPFLAGS += -I$(acism)
 
 # vim: set nowrap :
