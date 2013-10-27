@@ -23,7 +23,7 @@ FEATURES
     then memory-mapped by many processes.
 
 * Searches byte vectors, not null-terminated strings.
-    Suitable for searching machine code as much as searching test.
+    Suitable for searching machine code as much as searching text.
 
 * DOS-proof. Well, that's an attribute of Aho-Corasick,
     so no real points for that.
