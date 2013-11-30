@@ -93,7 +93,9 @@ acism_create(MEMREF const* strv, int nstrs)
     set_tranv(psp, calloc(p_size(psp), 1));
     if (!psp->tranv) goto FAIL;
     fill_tranv(psp, troot);
-    psp->tranv[0] = 1; // deliberately-bad symbol field.
+    // The root state (0) must not look like a valid backref.
+    // Any symbol value other than (0) in tranv[0] ensures that.
+    psp->tranv[0] = 1;
 
     if (nhash) {
         fill_hashv(psp, troot, nnodes);
