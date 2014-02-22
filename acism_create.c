@@ -25,8 +25,19 @@ typedef struct tnode {
     SYMBOL sym, is_suffix;
 } TNODE;
 
+//--------------|---------------------------------------------
+// bitwid: 1+floor(log2(u))
+static inline int bitwid(unsigned u)
+{
+    int ret = !!u;
+    if (u & 0xFFFF0000) u >>= 16, ret += 16;
+    if (u & 0x0000FF00) u >>= 8, ret += 8;
+    if (u & 0x000000F0) u >>= 4, ret += 4;
+    if (u & 0x0000000C) u >>= 2, ret += 2;
+    if (u & 0x00000002) ret++;
+    return ret;
+}
 static void add_backlinks(TNODE*, TNODE**, TNODE**);
-static int bitwid(unsigned u);
 static int create_tree(TNODE*, SYMBOL const*symv, MEMREF const*strv, int nstrs);
 static void fill_hashv(ACISM*, TNODE const*, int nn);
 static void fill_symv(ACISM*, MEMREF const*, int ns);
@@ -116,18 +127,6 @@ acism_create(MEMREF const* strv, int nstrs)
 FAIL: acism_destroy(psp), psp = NULL;
 DONE: free(troot), free(v1), free(v2);
     return psp;
-}
-//--------------|---------------------------------------------
-// bitwid: 1+floor(log2(u))
-static inline int bitwid(unsigned u)
-{
-    int ret = !!u;
-    if (u & 0xFFFF0000) u >>= 16, ret += 16;
-    if (u & 0x0000FF00) u >>= 8, ret += 8;
-    if (u & 0x000000F0) u >>= 4, ret += 4;
-    if (u & 0x0000000C) u >>= 2, ret += 2;
-    if (u & 0x00000002) ret++;
-    return ret;
 }
 
 typedef struct { int freq, rank; } FRANK;
