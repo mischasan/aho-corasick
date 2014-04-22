@@ -47,7 +47,7 @@ acism_more(ACISM const *psp, MEMREF const text,
 
         if (!t_valid(&ps, next)) {
             // (sym) is not in any transition from this state.
-            state = 0;
+            state = t_next(&ps, p_tran(&ps, 0, sym));
             continue;
         }
 
