@@ -41,7 +41,8 @@ acism_dump(ACISM const* psp, PS_DUMP_TYPE pdt, FILE *out, MEMREF const*pattv)
     char charv[256];
     int symdist[257] = {};
     for (i = 256; --i >=0;) charv[psp->symv[i]] = i;
-
+    for (i = 0; i < 256; ++i) if (psp->symv[i]) printf(" %02X:%d", i, psp->symv[i]);
+    putc('\n', out);
     if (pdt & PS_STATS) {
         for (i = psp->tran_size, empty = 0; --i >= 0;) {
             if (psp->tranv[i]) {
@@ -62,10 +63,9 @@ acism_dump(ACISM const* psp, PS_DUMP_TYPE pdt, FILE *out, MEMREF const*pattv)
     }
 
     if (pdt & PS_TRAN) {
-        fprintf(out, "==== TRAN:\n Cell State C MS Next\n");
+        fprintf(out, "==== TRAN:\n%8s %8s Ch MS %8s\n", "Cell", "State", "Next");
         for (i = 1; i < (int)psp->tran_size; ++i) {
-            fprintf(out, "%8d %8d ", i,
-                        i - t_sym(psp, psp->tranv[i]));
+            fprintf(out, "%8d %8d ", i, i - t_sym(psp, psp->tranv[i]));
             printrans(psp, i, charv, out, pattv);
         }
     }
@@ -96,6 +96,7 @@ static void
 printrans(ACISM const*psp, STATE s, char const *charv,
             FILE *out, MEMREF const *pattv)
 {
+    (void)pattv;
     TRAN x = psp->tranv[s];
     if (!x) {
         fprintf(out, "(empty)\n");
@@ -105,18 +106,19 @@ printrans(ACISM const*psp, STATE s, char const *charv,
     SYMBOL sym = t_sym(psp,x);
     char c = charv[sym];
 
-    fprintf(out, !sym ? "--" : isprint(c) ? "%c " : "%02X", c);
+    //fprintf(out, !sym ? "--" : isprint(c) ? "'%c'" : "%02X ", c);
+    fprintf(out, !sym ? "--" : "%02X ", c);
     putc("M-"[!(x & IS_MATCH)], out); putc("S-"[!(x & IS_SUFFIX)], out);
 
     STATE next = t_next(psp, x);
     if (t_isleaf(psp, x)) {
-        fprintf(out, " %7d > %.*s\n", PSTR(psp, t_strno(psp, x), pattv));
+        fprintf(out, " => %d\n", t_strno(psp, x));
     } else {
         fprintf(out, " %7d", next);
         if (x & IS_MATCH) {
             int i;
             for (i = p_hash(psp, s); psp->hashv[i].state != s; ++i);
-            fprintf(out, " #%d %.*s", PSTR(psp, psp->hashv[i].strno, pattv));
+            fprintf(out, " #> %d", psp->hashv[i].strno);
         }
         putc('\n', out);
     }

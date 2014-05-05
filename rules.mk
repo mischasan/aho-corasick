@@ -57,7 +57,7 @@ CFLAGS          += -Wno-attributes $(CFLAGS.$(BLD))
 # -D_FORTIFY_SOURCE=2 on some plats rejects any libc call whose return value is ignored.
 #   For some calls (system, write) this makes sense. For others (vasprintf), WTF?
 
-CPPFLAGS        += -mtune=native -I$(PREFIX)/include -D_FORTIFY_SOURCE=2 -D_GNU_SOURCE $(CPPFLAGS.$(BLD))
+CPPFLAGS        += -I$(PREFIX)/include -D_FORTIFY_SOURCE=2 -D_GNU_SOURCE $(CPPFLAGS.$(BLD))
 LDFLAGS         += -L$(PREFIX)/lib $(LDFLAGS.$(BLD))
 LDLIBS          += $(LDLIBS.$(OSNAME))
 
