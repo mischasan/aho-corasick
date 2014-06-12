@@ -5,7 +5,7 @@ export acism ?= .
 # acism.pgms: test programs requiring no args
 
 acism.c          = $(patsubst %,$(acism)/%, acism.c acism_create.c acism_dump.c acism_file.c)
-acism.pgms       = $(acism)/acism_x $(acism)/acism_mmap_x $(acism)/five_t
+acism.pgms       = $(acism)/acism_x $(acism)/acism_mmap_x
 
 #---------------- PUBLIC VARS:
 acism.lib       = $(acism)/libacism.a
