@@ -29,27 +29,26 @@ acism_more(ACISM const *psp, MEMREF const text,
 
     while (cp < endp) {
         _SYMBOL sym = ps.symv[(uint8_t)*cp++];
-
         if (!sym) {
             // Input byte is not in any pattern string.
             state = 0;
             continue;
         }
 
-        // Search for a state with a valid transition for this
-        // state and sym, following the backref chain.
+        // Search for a valid transition from this (state, sym),
+        //  following the backref chain.
 
         TRAN next, back;
-
-        while (!t_valid(&ps, next = p_tran(&ps, state, sym))
-               && t_valid(&ps, back = p_tran(&ps, state, 0)))
-            state = t_next(&ps, back);
-
-        if (!t_valid(&ps, next)) {
-            // (sym) is not in any transition from this state.
-            state = t_next(&ps, p_tran(&ps, 0, sym));
-            continue;
+        while (1) {
+            next = p_tran(&ps, state, sym);         // sym has a valid transition from this state?
+            if (t_valid(&ps, next)) break;          // => YES
+            if (!state) break;                      // At root; no backrefs; advance to next text char.
+            back = p_tran(&ps, state, 0);
+            state = t_valid(&ps, back) ? t_next(&ps, back) : 0; // All states have an implicit backref to root.
         }
+
+        if (!t_valid(&ps, next))
+            continue;
 
         if (!(next & (IS_MATCH | IS_SUFFIX))) {
             // No complete match yet; keep going.
