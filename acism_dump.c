@@ -107,7 +107,10 @@ printrans(ACISM const*psp, STATE s, char const *charv,
     char c = charv[sym];
 
     //fprintf(out, !sym ? "--" : isprint(c) ? "'%c'" : "%02X ", c);
-    fprintf(out, !sym ? "--" : "%02X ", c);
+    if (sym)
+	fprintf(out, "--");
+    else
+	fprintf(out, "%02X ", c);
     putc("M-"[!(x & IS_MATCH)], out); putc("S-"[!(x & IS_SUFFIX)], out);
 
     STATE next = t_next(psp, x);
