@@ -32,7 +32,7 @@ PREFIX          ?= /usr/local
 DESTDIR         ?= $(PREFIX)
 OSNAME          := $(shell uname -s)
 
-CFLAGS.         = -O9
+CFLAGS.         = -O3
 
 CFLAGS.cover    = --coverage -DNDEBUG
 LDFLAGS.cover   = --coverage
@@ -53,6 +53,7 @@ Wno-unused-result := $(shell gcc -dumpversion | awk '$$0 >= 4.5 {print "-Wno-unu
 CFLAGS          += -g -MMD -fdiagnostics-show-option -fstack-protector --param ssp-buffer-size=4 -fno-strict-aliasing
 CFLAGS          += -Wall -Werror -Wextra -Wcast-align -Wcast-qual -Wformat=2 -Wformat-security -Wmissing-prototypes -Wnested-externs -Wpointer-arith -Wredundant-decls -Wshadow -Wstrict-prototypes -Wno-unknown-pragmas -Wunused $(Wno-unused-result) -Wwrite-strings
 CFLAGS          += -Wno-attributes $(CFLAGS.$(BLD))
+CFLAGS          += -Wno-format-nonliteral
 
 # -D_FORTIFY_SOURCE=2 on some plats rejects any libc call whose return value is ignored.
 #   For some calls (system, write) this makes sense. For others (vasprintf), WTF?

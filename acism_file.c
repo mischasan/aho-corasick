@@ -59,7 +59,7 @@ acism_load(FILE *fp)
 ACISM*
 acism_mmap(FILE *fp)
 {
-    char *mp = mmap(0, lseek(fileno(fp), 0L, 2), PROT_READ,
+    ACISM *mp = mmap(0, lseek(fileno(fp), 0L, 2), PROT_READ,
                     MAP_SHARED|MAP_NOCORE, fileno(fp), 0);
     if (mp == MAP_FAILED) return NULL;
 
@@ -71,7 +71,7 @@ acism_mmap(FILE *fp)
         return NULL;
     }
 
-    set_tranv(psp, mp + sizeof(ACISM));
+    set_tranv(psp, ((char *)mp) + sizeof(ACISM));
     return psp;
 }
 
