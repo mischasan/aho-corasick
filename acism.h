@@ -32,9 +32,9 @@ typedef struct { char const *ptr; size_t len; } MEMREF;
 
 typedef struct acism ACISM;
 
-// For each match, acism_scan calls its ACISM_ACTION fn,
+// For each match, acism_more calls its ACISM_ACTION fn,
 // giving it the strv[] index of the matched string, and
-// the text offset of the byte AFTER the end of the string.
+// the offset in text[] of the byte AFTER the end of the string,
 // If ACISM_ACTION returns 0, search continues; otherwise,
 // acism_scan returns that nonzero value immediately.
 
