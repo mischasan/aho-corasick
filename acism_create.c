@@ -52,7 +52,7 @@ set_tran(ACISM *psp, STATE s, SYMBOL sym, int match, int suffix, TRAN ns)
 {
     psp->tranv[s + sym] = sym   | (match ? IS_MATCH : 0) 
                                 | (suffix ? IS_SUFFIX : 0)
-                                | (ns << psp->sym_bits);
+                                | (ns << SYM_BITS);
 }
 
 // Track statistics for construction
@@ -90,7 +90,7 @@ acism_create(MEMREF const* strv, int nstrs)
 
     // Calculate each node's offset in tranv[]:
     psp->tran_size = interleave(troot, nnodes, psp->nsyms, v1, v2);
-    if (bitwid(psp->tran_size + nstrs - 1) + psp->sym_bits > 30)
+    if (bitwid(psp->tran_size + nstrs - 1) + SYM_BITS > sizeof(TRAN)*8 - 2)
         goto FAIL;
 
     if (nhash) {
@@ -147,9 +147,11 @@ fill_symv(ACISM *psp, MEMREF const *strv, int nstrs)
 
     for (i = 256; --i >= 0 && frv[i].freq;)
         psp->symv[frv[i].rank] = ++psp->nsyms;
-
-    psp->sym_bits = bitwid(++psp->nsyms);
+    ++psp->nsyms;
+#if ACISM_SIZE < 8
+    psp->sym_bits = bitwid(psp->nsyms);
     psp->sym_mask = ~(-1 << psp->sym_bits);
+#endif
 }
 
 static int

@@ -18,15 +18,15 @@ on_match(int strnum, int textpos, MEMREF const *pattv)
 {
     (void)strnum, (void)textpos, (void)pattv;
     ++actual;
-//    fprintf(matchfp, "%9d %7d '%.*s'\n", textpos, strnum, (int)pattv[strnum].len, pattv[strnum].ptr);
+    if (matchfp) fprintf(matchfp, "%9d %7d '%.*s'\n", textpos, strnum, (int)pattv[strnum].len, pattv[strnum].ptr);
     return 0;
 }
 
 int
 main(int argc, char **argv)
 {
-    if (argc < 2 || argc > 5)
-        usage("pattern_file [target_file]\n" "Creates acism.tmp\n");
+    if (argc < 2 || argc > 4)
+        usage("pattern_file [nmatches [match.log]]\n" "Creates acism.tmp");
 
     MEMBUF patt = chomp(slurp(argv[1]));
     if (!patt.ptr)
@@ -52,31 +52,21 @@ main(int argc, char **argv)
     }
 #endif//ACISM_STATS
 
+    diag("state machine saved as acism.tmp");
     FILE *fp = fopen("acism.tmp", "w");
     acism_save(fp, psp);
     fclose(fp);
 
-#if 0
-    // For coverage ...
-    fp = fopen("dump.tmp", "w");
-    acism_dump(psp, PS_ALL, fp, pattv);
-    fclose(fp);
-    acism_destroy(psp);
-    fp = fopen("acism.tmp", "r");
-    psp = acism_load(fp);
-    fclose(fp);
-#endif
     if (argc > 2) {
-        // It's more important to get test coverage of acism_more,
-        // than to test that acism_scan calls acism_more correctly.
-        int fd = open(argv[2], O_RDONLY);
-        if (fd < 0) return fprintf(stderr, "acism_x: %s: cannot open: %s\n", argv[2], strerror(errno));
 
+        int fd = open(argv[1], O_RDONLY);
+        if (fd < 0) return fprintf(stderr, "acism_x: %s: cannot open: %s\n", argv[2], strerror(errno));
+        
         static char buf[1024*1024];
         MEMREF text = {buf, 0};
         int state = 0;
         double elapsed = 0, start = tick();
-        matchfp = fopen("match.tmp", "w");
+        if (argc > 3) matchfp = fopen(argv[3], "w");
         while (0 < (text.len = read(fd, buf, sizeof buf))) {
             t = tick();
             (void)acism_more(psp, text, (ACISM_ACTION*)on_match, pattv, &state);
@@ -85,10 +75,10 @@ main(int argc, char **argv)
         }
         putc('\n', stderr);
         close(fd);
-        fclose(matchfp);
+        if (matchfp) fclose(matchfp);
         ok(text.len == 0, "text_file scanned in 1M blocks; read(s) took %.3f secs", tick() - start - elapsed);
 
-        int expected = argc == 4 ? atoi(argv[3]) : actual;
+        int expected = argc > 2 ? atoi(argv[2]) : actual;
         if (!ok(actual == expected, "%d matches found, in %.3f secs", expected, elapsed))
             diag("actual: %d\n", actual);
     }

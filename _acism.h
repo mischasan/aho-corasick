@@ -25,13 +25,27 @@
 
 typedef int (*qsort_cmp)(const void *, const void *);
 
-typedef uint32_t TRAN, STATE, STRNO;
-typedef uint16_t SYMBOL;
+#ifndef ACISM_SIZE
+#   define ACISM_SIZE 4
+#endif
+
+#if ACISM_SIZE == 8
+    typedef uint64_t TRAN, STATE, STRNO;
+#   define SYM_BITS 9U
+#   define SYM_MASK 511
+#else
+    typedef uint32_t TRAN, STATE, STRNO;
+#   define SYM_BITS psp->sym_bits
+#   define SYM_MASK psp->sym_mask
+#endif
+
+typedef uint16_t  SYMBOL;
 typedef unsigned _SYMBOL; // An efficient stacklocal SYMBOL
 
-enum { IS_MATCH = 0x80000000UL,
-       IS_SUFFIX = 0x40000000UL,
-       T_FLAGS = IS_MATCH | IS_SUFFIX
+enum { 
+    IS_MATCH  = (TRAN)1 << (8*sizeof(TRAN) - 1),
+    IS_SUFFIX = (TRAN)1 << (8*sizeof(TRAN) - 2),
+    T_FLAGS   = IS_MATCH | IS_SUFFIX
 };
 
 typedef struct { STATE state; STRNO strno; } STRASH;
@@ -39,12 +53,15 @@ typedef struct { STATE state; STRNO strno; } STRASH;
 typedef enum { BASE=2, USED=1 } USES;
 
 struct acism {
-    TRAN *tranv;
-    STRASH *hashv;
+    TRAN*   tranv;
+    STRASH* hashv;
     unsigned flags;
 #   define IS_MMAP 1
+
+#if ACISM_SIZE < 8
     TRAN sym_mask;
     unsigned sym_bits;
+#endif
     unsigned hash_mod; // search hashv starting at (state + sym) % hash_mod.
     unsigned hash_size; // #(hashv): hash_mod plus the overflows past [hash_mod-1]
     unsigned tran_size; // #(tranv)
@@ -59,8 +76,6 @@ static inline unsigned p_size(ACISM const *psp)
 { return psp->hash_size * sizeof*psp->hashv
        + psp->tran_size * sizeof*psp->tranv; }
 
-// With gcc -O3, t_valid takes 1 op, p_tran and t_next take 3 ops.
-
 static inline unsigned p_hash(ACISM const *psp, STATE s)
     { return s * 107 % psp->hash_mod; }
 
@@ -70,12 +85,13 @@ static inline TRAN p_tran(ACISM const *psp, STATE s, _SYMBOL sym)
 static inline void set_tranv(ACISM *psp, void *mem)
     { psp->hashv = (STRASH*)&(psp->tranv = mem)[psp->tran_size]; }
 
-// TRAN bitfield accessors
+// TRAN bitfield accessors. For ACISM_SIZE=8, SYM_{BITS,MASK} do not use psp.
+
 static inline _SYMBOL t_sym(ACISM const *psp, TRAN t)
-    { return t & psp->sym_mask; }
+    { (void)psp; return t & SYM_MASK; }
 
 static inline STATE t_next(ACISM const *psp, TRAN t)
-    { return (t & ~T_FLAGS) >> psp->sym_bits; }
+    { (void)psp; return (t & ~T_FLAGS) >> SYM_BITS; }
 
 static inline int t_isleaf(ACISM const *psp, TRAN t)
     { return t_next(psp, t) >= psp->tran_size; }
