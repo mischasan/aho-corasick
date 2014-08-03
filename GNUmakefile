@@ -11,6 +11,7 @@ ACISM_SIZE       ?= 4   # size of transition table elements.
 #---------------- PUBLIC VARS (see rules.mk)
 acism.lib       = $(acism)/libacism.a
 acism.include   = $(acism)/acism.h
+all             += acism
 clean           += $(acism)/*.tmp
 
 #---------------- PUBLIC TARGETS (see rules.mk):
@@ -29,11 +30,11 @@ $(acism.lib)	: $(acism.c:c=o)
 
 $(acism)/acism_t.pass : $(acism.pgms) $(acism)/words
 
-$(acism.pgms)   : CPPFLAGS := -I$(acism) -DACISM_SIZE=$(ACISM_SIZE) $(CPPFLAGS) 
 $(acism.pgms)   : $(acism.lib) $(acism)/msutil.o $(acism)/tap.o
+$(acism.pgms)   : CPPFLAGS += -DACISM_SIZE=$(ACISM_SIZE)
 
-$(acism.c:c=[isI]) : CPPFLAGS := -I$(acism) -DACISM_SIZE=$(ACISM_SIZE) $(CPPFLAGS) 
-# Include auto-generated depfiles (gcc -MMD):
+$(acism.c:c=s)  : CPPFLAGS += -DACISM_SIZE=$(ACISM_SIZE)
+$(acism.c:c=i)  : CPPFLAGS += -DACISM_SIZE=$(ACISM_SIZE)
+
 -include $(acism)/*.d
-
 # vim: set nowrap :

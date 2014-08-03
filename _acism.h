@@ -79,13 +79,13 @@ static inline unsigned p_size(ACISM const *psp)
 static inline unsigned p_hash(ACISM const *psp, STATE s)
     { return s * 107 % psp->hash_mod; }
 
-static inline TRAN p_tran(ACISM const *psp, STATE s, _SYMBOL sym)
-    { return psp->tranv[s + sym] ^ sym; }
-
 static inline void set_tranv(ACISM *psp, void *mem)
     { psp->hashv = (STRASH*)&(psp->tranv = mem)[psp->tran_size]; }
 
-// TRAN bitfield accessors. For ACISM_SIZE=8, SYM_{BITS,MASK} do not use psp.
+// TRAN accessors. For ACISM_SIZE=8, SYM_{BITS,MASK} do not use psp.
+
+static inline TRAN p_tran(ACISM const *psp, STATE s, _SYMBOL sym)
+    { return psp->tranv[s + sym] ^ sym; }
 
 static inline _SYMBOL t_sym(ACISM const *psp, TRAN t)
     { (void)psp; return t & SYM_MASK; }

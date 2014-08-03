@@ -79,7 +79,7 @@ acism_create(MEMREF const* strv, int nstrs)
     int nnodes = create_tree(troot, psp->symv, strv, nstrs);
     NOTE(nnodes);
 
-    // v1, v2: work vectors for add_backlink and interleave.
+    // v1, v2: breadth-first work vectors for add_backlink and interleave.
     int nhash, i = (nstrs + 1) * sizeof*tp;
     add_backlinks(troot, v1 = malloc(i), v2 = malloc(i));
 
@@ -113,7 +113,7 @@ acism_create(MEMREF const* strv, int nstrs)
         // Adjust hash_size to include trailing overflows
         //  but trim trailing empty slots.
         psp->hash_size = psp->hash_mod;
-        while ( psp->hashv[psp->hash_size].state) ++psp->hash_size;
+        while ( psp->hashv[psp->hash_size].state)     ++psp->hash_size;
         while (!psp->hashv[psp->hash_size - 1].state) --psp->hash_size;
         set_tranv(psp, realloc(psp->tranv, p_size(psp)));
     }
