@@ -18,7 +18,7 @@
 */
 
 #include "msutil.h"
-#include <tap.h>
+#include "tap.h"
 #include "acism.h"
 
 static int nmatches = 0;
