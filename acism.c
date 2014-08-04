@@ -39,10 +39,7 @@ acism_more(ACISM const *psp, MEMREF const text,
         //  following the backref chain.
 
         TRAN next, back;
-        while (1) {
-            next = p_tran(&ps, state, sym);         // sym has a valid transition from this state?
-            if (t_valid(&ps, next)) break;          // => YES
-            if (!state) break;                      // At root; no backrefs; advance to next text char.
+        while (!t_valid(&ps, next = p_tran(&ps, state, sym)) && state) {
             back = p_tran(&ps, state, 0);
             state = t_valid(&ps, back) ? t_next(&ps, back) : 0; // All states have an implicit backref to root.
         }

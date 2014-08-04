@@ -1,5 +1,9 @@
-#!/bin/sh
+#!/bin/bash
+
 acism=${acism:-.}
 trap 'Q=$?; set +x; trap "" 0; rm -f acism.tmp; exit $Q' 0
-$acism/acism_x $acism/words $acism/words 11553126
+set -e
+
+$acism/acism_x $acism/words 11553126
+
 $acism/acism_mmap_x acism.tmp $acism/words

@@ -15,15 +15,14 @@
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #------------------------------------------------------------------------
-# INPUTS
-#   $(all)	: list of module names that want standard "clean".
-#   $BLD	: empty, or one of:   cover  debug  profile
-#   $(<module>.clean): list of non-target dirs/files to clean up.
-#   $(<module>.test): list of .pass targets for <module>
+# RULES.MK INPUTS
+#   $BLD   : |cover|debug|profile
+#   $(all) : list of module names that want standard "clean" of profiler tmpfiles etc.
 
 ifndef RULES_MK
 RULES_MK:=# Allow repeated "-include".
 
+SHELL           = /bin/bash
 PS4             := \# # Prefix for "sh -x" output.
 export LD_LIBRARY_PATH PS4
 
@@ -57,6 +56,7 @@ CFLAGS          += -Wno-format-nonliteral
 
 # -D_FORTIFY_SOURCE=2 on some plats rejects any libc call whose return value is ignored.
 #   For some calls (system, write) this makes sense. For others (vasprintf), WTF?
+#   See "__wur" in msutil.h for the workaround.
 
 CPPFLAGS        += -I$(PREFIX)/include -D_FORTIFY_SOURCE=2 -D_GNU_SOURCE $(CPPFLAGS.$(BLD))
 LDFLAGS         += -L$(PREFIX)/lib $(LDFLAGS.$(BLD))
@@ -71,8 +71,8 @@ LDLIBS          += $(LDLIBS.$(OSNAME))
 .PHONY          : all clean cover debug gccdefs install profile source tags test
 .DEFAULT_GOAL   := all
 
-# $(all) contains all subproject names. It can be used in ACTIONS but not RULES,
-# since it accumulates across "include */GNUmakefile"'s.
+# $(all) contains subproject names. It can be used in ACTIONS but not RULES,
+#   since it accumulates across included submakefiles.
 
 # All $(BLD) types use the same pathnames for binaries.
 # To switch from release to debug, first "make clean".
@@ -80,8 +80,8 @@ LDLIBS          += $(LDLIBS.$(OSNAME))
 
 all             :;@echo "$@ done for BLD='$(BLD)'"
 clean           :;@rm -rf $(shell $(MAKE) -nps all test cover profile | sed -n '/^# I/,$${/^[^\#\[%.][^ %]*: /s/:.*//p;}') \
-			  $(clean)  $(foreach A,$(all), $($A)/{gmon.out,tags,*.fail,*.gcda,*.gcno,*.gcov,*.prof}) \
-                          $(filter %.d,$(MAKEFILE_LIST))
+                          $(foreach A,$(all), $($A)/{gmon.out,tags,*.fail,*.gcda,*.gcno,*.gcov,*.prof}) \
+                          $(clean)  $(filter %.d,$(MAKEFILE_LIST))
 
 cover           : BLD := cover
 %.cover         : %.test    ; gcov -bcp $($@) | covsum
@@ -97,8 +97,8 @@ Expand          = perl -pe 's/ (?<!\\) \$${ ([A-Z_][A-Z_0-9]*) } / $$ENV{$$1} ||
 Install         = if [ "$(strip $2)" ]; then mkdir -p $1; pax -rw -pe -s:.*/:: $2 $1; fi
 
 # If you believe in magic vars, e.g. "myutil.bin = prog1 prog2 prog3"
-# causing "myutil.install" to copy those files to $(DESTDIR)/bin
-# then here's your automagic "install":
+#   causing "myutil.install" to copy those files to $(DESTDIR)/bin
+#   then here's your automagic "install":
 %.install       : %.all $(%.bin) $(%.etc) $(%.include) $(%.ini) $(%.lib) $(%.sbin) \
                 ;@$(call Install,$(DESTDIR)/bin,    $($*.bin))  \
                 ; $(call Install,$(DESTDIR)/etc,    $($*.etc))  \
@@ -108,9 +108,10 @@ Install         = if [ "$(strip $2)" ]; then mkdir -p $1; pax -rw -pe -s:.*/:: $
                 ; $(call Install,$(DESTDIR)/include,$($*.include))
 
 profile         : BLD := profile
-%.profile       : %.test    ;@for x in $($*.test:.pass=); do gprof -b $$x >$$x.prof; done
+profile         : test     ;@for x in $($*.test:.pass=); do gprof -b $$x >$$x.prof; done
 
 %.test          : $(%.test)
+
 # GMAKE trims leading "./" from $*. Sigh.
 %.pass          : %         ; rm -f $@; $(*D)/$(*F) >& $*.fail && mv -f $*.fail $@
 
@@ -124,23 +125,23 @@ profile         : BLD := profile
 
 # Ensure that intermediate files (e.g. the foo.o caused by "foo : foo.c")
 #  are not auto-deleted --- causing a re-compile every second "make".
-.SECONDARY  	: 
+.SECONDARY      : 
 
 #---------------- TOOLS:
 # NOTE: "source" MUST be set with "=", not ":=", else MAKE recurses infinitely.
-#source          = $(filter-out %.d, $(shell ls $((MAKEFILE_LIST); $(MAKE) -nps all test cover profile | sed -n '/^. Not a target/{n;/^[^.*][^ ]*:/s/:.*//p;}' | LC_ALL=C sort -u))
 source          = $(filter-out %.d, $(shell $(MAKE) -nps all test cover profile | sed -n '/^. Not a target/{n;/^[^.*][^ ]*:/s/:.*//p;}'))
 
 # gccdefs : all gcc internal #defines.
 gccdefs         :;@$(CC) $(CPPFLAGS) -E -dM - </dev/null | cut -c8- | sort
 tags            :; ctags $(filter %.c,$(source)) $(filter %.h,$(source))
 
-# %.ii lists all (recursive) #included files; e.g.: "make /usr/include/errno.h.ii"
-%.ii            : %         ;@ls -1 2>&- `$(CC) $(CPPFLAGS) -M $*` ||:
-%.i             : %.c       ; $(COMPILE.c) -E -o $@ $<
-
 # "make SomeVar." prints $(SomeVar)
 %.              :;@echo '$($*)'
+
+# %.I lists all (recursive) #included files; e.g.: "make /usr/include/errno.h.I"
+%.I             : %.c       ;@ls -1 2>&- `$(CC) $(CPPFLAGS) -M $*` ||:
+%.i             : %.c       ; $(COMPILE.c) -E -o $@ $<
+%.s             : %.c       ; $(COMPILE.c) -S -o $@ $< && deas $@
 
 endif
 # vim: set nowrap :
