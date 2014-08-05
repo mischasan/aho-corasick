@@ -37,14 +37,15 @@ static inline int bitwid(unsigned u)
     if (u & 0x00000002) ret++;
     return ret;
 }
-static void add_backlinks(TNODE*, TNODE**, TNODE**);
-static int create_tree(TNODE*, SYMBOL const*symv, MEMREF const*strv, int nstrs);
-static void fill_hashv(ACISM*, TNODE const*, int nn);
-static void fill_symv(ACISM*, MEMREF const*, int ns);
-static void fill_tranv(ACISM*, TNODE const*);
+static void   fill_symv(ACISM*, MEMREF const*, int ns);
+static int    create_tree(TNODE*, SYMBOL const*symv, MEMREF const*strv, int nstrs);
+static void   add_backlinks(TNODE*, TNODE**, TNODE**);
+static void   prune_backlinks(TNODE*);
+static int    interleave(TNODE*, int nnodes, int nsyms, TNODE**, TNODE**);
+static void   fill_tranv(ACISM*, TNODE const*);
+static void   fill_hashv(ACISM*, TNODE const*, int nn);
+
 static TNODE* find_child(TNODE*, SYMBOL);
-static int interleave(TNODE*, int nnodes, int nsyms, TNODE**, TNODE**);
-static void prune_backlinks(TNODE*);
 
 // (ns) is either a STATE, or a (STRNO + tran_size)
 static inline void

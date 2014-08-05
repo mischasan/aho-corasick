@@ -20,8 +20,6 @@
 #ifndef ACISM_H
 #define ACISM_H
 
-#define ACISM_STATS 1
-
 // "acism" uses MEMREF {ptr,len} bytevec structs for "string" args,
 // rather than NUL-terminated "C" strings.
 
@@ -32,21 +30,22 @@ typedef struct { char const *ptr; size_t len; } MEMREF;
 
 typedef struct acism ACISM;
 
+ACISM* acism_create(MEMREF const *strv, int nstrs);
+void   acism_destroy(ACISM*);
+
 // For each match, acism_scan calls its ACISM_ACTION fn,
-// giving it the strv[] index of the matched string, and
-// the text offset of the byte AFTER the end of the string.
+//  giving it the strv[] index of the matched string,
+//  and the text[] offset of the byte PAST the end of the string.
 // If ACISM_ACTION returns 0, search continues; otherwise,
-// acism_scan returns that nonzero value immediately.
+//  acism_more returns that nonzero value immediately.
 
 typedef int (ACISM_ACTION)(int strnum, int textpos, void *context);
 
-ACISM* acism_create(MEMREF const *strv, int nstrs);
-void acism_destroy(ACISM*);
-
-// If sequential blocks of (text) are passed to repeated acism_scan calls,
-//  then acism_more() continues where the previous acism_scan/acism_more
-//  left off -- string matches can cross block boundaries.
+// If sequential blocks of (text) are passed to repeated acism_more calls,
+//  then search continues where the previous acism_more left off --
+//  string matches can cross block boundaries.
 // *state should initially be (0).
+
 int acism_more(ACISM const*, MEMREF const text,
                  ACISM_ACTION *fn, void *fndata, int *state);
 
@@ -57,7 +56,7 @@ static inline int acism_scan(ACISM const*psp, MEMREF const text,
     return acism_more(psp, text, fn, fndata, &state);
 }
 
-void acism_save(FILE*, ACISM const*);
+void   acism_save(FILE*, ACISM const*);
 ACISM* acism_load(FILE*);
 ACISM* acism_mmap(FILE*);
 
@@ -68,5 +67,7 @@ typedef enum {
 
 // If (pattv) is not NULL, dump output includes strings.
 void acism_dump(ACISM const*, PS_DUMP_TYPE, FILE*, MEMREF const*pattv);
+
+#define ACISM_STATS 1   // Collect perf stats during acism_create (see acism_dump).
 
 #endif//ACISM_H

@@ -1,0 +1,9 @@
+# compiled (test) programs:
+*_[tx]
+# intermediate files:
+*.[adios]
+# test byproducts:
+*.fail
+*.pass
+*.swp
+*.tmp
