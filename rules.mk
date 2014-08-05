@@ -118,7 +118,7 @@ profile         : test     ;@for x in $($*.test:.pass=); do gprof -b $$x >$$x.pr
 # To build a .so, "make clean" first, to ensure all .o files compiled with -fPIC
 %.so            : CFLAGS := -fPIC $(filter-out $(CFLAGS.cover) $(CFLAGS.profile), $(CFLAGS))
 %.so            : %.o       ; $(CC) $(LDFLAGS) -o $@ -shared $< $(LDLIBS)
-%.so            : %.a       ; $(CC) $(CFLAGS)  -o $@ -shared -Wl,-whole-archive $< $(LDLIBS)
+%.so            : %.a       ; $(CC) $(CFLAGS)  -o $@ -shared -Wl,-whole-archive $< -Wl,-no-whole-archive $(LDLIBS)
 %.a             :           ; [ "$^" ] && ar crs $@ $(filter %.o,$^)
 %/..            :           ;@mkdir -p $(@D)
 %               : %.gz      ; gunzip -c $^ >$@
