@@ -22,6 +22,7 @@ test            : $(acism)/acism_t.pass
 install .PHONY  : acism.install
 
 #---------------- PRIVATE RULES:
+$(acism.pgms)   : CPPFLAGS += -DACISM_SIZE=$(ACISM_SIZE)
 $(acism.lib)	: $(acism.c:c=o)
 
 # ACISM by default defines TRAN as a 4-byte int. This has about a 10MB pattern string limit.

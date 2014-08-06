@@ -41,9 +41,9 @@ acism_more(ACISM const *psp, MEMREF const text,
         // Search for a valid transition from this (state, sym),
         //  following the backref chain.
 
-        TRAN next, back;
+        TRAN next;
         while (!t_valid(&ps, next = p_tran(&ps, state, sym)) && state != ROOT) {
-            back = p_tran(&ps, state, BACK);
+            TRAN back = p_tran(&ps, state, BACK);
             state = t_valid(&ps, back) ? t_next(&ps, back) : ROOT;
         }
 

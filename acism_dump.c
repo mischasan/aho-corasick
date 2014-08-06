@@ -20,10 +20,10 @@
 #include <stdio.h>
 #include "_acism.h"
 
-#if ACISM_SIZE > __SIZEOF_LONG__
+#if ACISM_SIZE == 4
+#   define FX   ""
+#elif __LONG_MAX__ < 9223372036854775807
 #   define FX   "ll"
-#elif ACISM_SIZE == __SIZEOF_INT__
-#   define FX
 #else
 #   define FX   "l"
 #endif
