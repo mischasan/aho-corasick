@@ -43,7 +43,7 @@ CFLAGS.profile  = -pg -DNDEBUG
 LDFLAGS.profile = -pg
 
 LDLIBS.FreeBSD  = -lm
-LDLIBS.Linux    = -ldl -lm -lresolv
+LDLIBS.Linux    = 
 
 # Before gcc 4.5, -Wno-unused-result was unknown and causes an error.
 Wno-unused-result := $(shell gcc -dumpversion | awk '$$0 >= 4.5 {print "-Wno-unused-result"}')
