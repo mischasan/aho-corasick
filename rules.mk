@@ -56,7 +56,7 @@ exec.profile	= strace -cf
 #--- *.$(OS):
 CFLAGS.Darwin   = 
 LDLIBS.FreeBSD  = -lm
-LDLIBS.Linux    = -ldl -lm -lresolv
+LDLIBS.Linux    = 
 
 # Before gcc 4.5, -Wno-unused-result was unknown and causes an error.
 Wno-unused-result := $(shell $(CC) -dumpversion | awk '$$0 >= 4.5 {print "-Wno-unused-result"}')
@@ -122,7 +122,7 @@ profile         : BLD := profile
 # To build a .so, "make clean" first, to ensure all .o files compiled with -fPIC
 %.so            : CFLAGS := -fPIC $(filter-out $(CFLAGS.cover) $(CFLAGS.profile), $(CFLAGS))
 %.so            : %.o       ; $(CC) $(LDFLAGS) -o $@ -shared $< $(LDLIBS)
-%.so            : %.a       ; $(CC) $(CFLAGS)  -o $@ -shared -Wl,-whole-archive $< $(LDLIBS)
+%.so            : %.a       ; $(CC) $(CFLAGS)  -o $@ -shared -Wl,-whole-archive $< -Wl,-no-whole-archive $(LDLIBS)
 %.a             :           ; [ "$^" ] && ar crs $@ $(filter %.o,$^)
 %.yy.c          : %.l       ; flex -o $@ $<
 %.tab.c 	    : %.y       ; bison $<
