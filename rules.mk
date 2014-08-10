@@ -56,7 +56,7 @@ exec.profile	= strace -cf
 #--- *.$(OS):
 CFLAGS.Darwin   = 
 LDLIBS.FreeBSD  = -lm
-LDLIBS.Linux    = 
+LDLIBS.Linux    = -lm   # floor()
 
 # Before gcc 4.5, -Wno-unused-result was unknown and causes an error.
 Wno-unused-result := $(shell $(CC) -dumpversion | awk '$$0 >= 4.5 {print "-Wno-unused-result"}')
@@ -92,30 +92,28 @@ LDLIBS          += $(LDLIBS.$(OS))
 # To extract and save exports, "make install DESTDIR=rel".
 
 all             :;@echo "$@ done for BLD='$(BLD)'"
+junkfiles       = gmon.out,tags,*.fail,*.gcda,*.gcno,*.gcov,*.prof
 clean           :;@rm -rf $(shell $(MAKE) -nps all test cover profile | sed -n '/^# I/,$${/^[^\#\[%.][^ %]*: /s/:.*//p;}') \
-                          $(foreach A,$(all), $($A)/{gmon.out,tags,*.fail,*.gcda,*.gcno,*.gcov,*.prof}) \
-                          $(clean)  $(filter %.d, $(MAKEFILE_LIST))
+                          $(addsuffix /{$(junkfiles)}, $(all))  $(clean)  $(filter %.d, $(MAKEFILE_LIST))
 
 cover           : BLD := cover
-%.cover         : %.test    ; gcov -bcp $($@) | covsum
+cover           : test    ; gcov -bcp $($@) | covsum    # DOES NOT WORK
 
 debug           : BLD := debug
 debug           : all
 
 #---- Macro functions:
 # Expand: translate every occurrence of "${var}" in a file to its env value (or ""):
-#   $(Expand) template >target
 Expand          = perl -pe 's/ (?<!\\) \$${ ([A-Z_][A-Z_0-9]*) } / $$ENV{$$1} || ""/geix'
-Install         = if [ "$(strip $2)" ]; then mkdir -p $1; ls $2 | cpio -pmd $1; fi;
-ToUpper         = $(shell echo $1 | tr '[a-z]' '[A-Z]')
 
-# install.bin = <exportable binaries> etc.
-install         :;$(foreach D, bin etc include ini lib man sbin, $(call Install, $(DESTDIR)/$D, $(install.$D)))
+Install         = if [ "$(strip $1)" ]; then mkdir -p $2; pax -rwpe -s:.*/:: $1 $2; fi
+install         : $(addprefix install., bin etc include ini lib man1 man3 sbin)
+install.man%    :;$(call Install, $($@), $(DESTDIR)/man/$(@:install.))
+install.%       :;$(call Install, $($@), $(DESTDIR)/$(@:install.))
 
 profile         : BLD := profile
 %.profile       : test    ;@for x in $($*.test:.pass=); do gprof -b $$x >$$x.prof; done
 
-%.test          : $(%.test)
 # GMAKE trims leading "./" from $*.; $(*D)/$(*F) restores it.
 %.pass          : %         ; rm -f $@; $(exec.$(BLD)) $(*D)/$(*F) >& $*.fail && mv -f $*.fail $@
 

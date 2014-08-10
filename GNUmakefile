@@ -3,33 +3,27 @@ export acism ?= .
 
 #---------------- PRIVATE VARS:
 acism.c         = $(patsubst %,$(acism)/%, acism.c acism_create.c acism_dump.c acism_file.c)
-acism.lib       = $(acism)/libacism.a
-acism.pgms      = $(acism)/acism_x $(acism)/acism_mmap_x
+acism.x         = $(acism)/acism_x $(acism)/acism_mmap_x
 
-# size in bytes of a transition table element.
-ACISM_SIZE      ?= 4   
-
-#---------------- PUBLIC VARS (see rules.mk)
+#---------------- PUBLIC VARS (see rules.mk): all clean install.* source tags
 all             += acism
 clean           += $(acism)/*.tmp
-
-install.lib     += $(acism.lib)
+install.lib     += $(acism)/libacism.a
 install.include += $(acism)/acism.h
+
+# This is easy but affects multi-project builds:
+CPPFLAGS        += -DACISM_SIZE=4
 
 #---------------- PUBLIC TARGETS (see rules.mk):
 all             : $(acism.lib)
 test            : $(acism)/acism_t.pass
 
 #---------------- PRIVATE RULES:
-$(acism.lib)	: $(acism.c:c=o)
+$(acism)/libacism.a	    : $(acism.c:c=o)
 
-$(acism)/acism_t.pass : $(acism.pgms) $(acism)/words
+$(acism)/acism_t.pass   : $(acism.x) $(acism)/words
 
-$(acism.pgms)   : $(acism.lib) $(acism)/msutil.o $(acism)/tap.o
-$(acism.pgms)   : CPPFLAGS += -DACISM_SIZE=$(ACISM_SIZE)
-
-$(acism.c:c=s)  : CPPFLAGS += -DACISM_SIZE=$(ACISM_SIZE)
-$(acism.c:c=i)  : CPPFLAGS += -DACISM_SIZE=$(ACISM_SIZE)
+$(acism.x)      : $(acism)/libacism.a $(acism)/msutil.o $(acism)/tap.o
 
 -include $(acism)/*.d
 # vim: set nowrap :
