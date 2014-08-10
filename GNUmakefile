@@ -2,7 +2,7 @@
 export acism ?= .
 
 #---------------- PRIVATE VARS:
-acism.c         = $(patsubst %,$(acism)/%, acism.c acism_create.c acism_dump.c acism_file.c)
+acism.c         = $(addprefix $(acism)/, acism.c acism_create.c acism_dump.c acism_file.c)
 acism.x         = $(acism)/acism_x $(acism)/acism_mmap_x
 
 #---------------- PUBLIC VARS (see rules.mk): all clean install.* source tags
