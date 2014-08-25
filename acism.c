@@ -83,7 +83,7 @@ acism_more(ACISM const *psp, MEMREF const text,
                         strno = ps.hashv[i].strno;
                     }
 
-                    if ((ret = cb(strno, cp - text.ptr, context))
+                    if ((ret = cb(strno, cp - text.ptr, context)))
                         goto EXIT;
                 }
 
