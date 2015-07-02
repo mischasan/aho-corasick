@@ -1,158 +1,207 @@
-# Copyright (C) 2009-2014 Mischa Sandberg <mischasan@gmail.com>
+# Environment:
+#-IMPORT VARS
+#   FORMAT                 One of {,debug,cover,profile}. Needs expansion
+#   CFLAGS_,_CFLAGS     Prefix and suffix of ${CFLAGS}
+#   CPPFLAGS_,CXXFLAGS_,LDFLAGS_,LDLIBS_,...
+#   clean               Additional files for "make clean".
+#   env                 Variables of interest to the gmake user...
 #
-# This program is free software; you can redistribute it and/or modify
-# it under the terms of the GNU Lesser General Public License Version 2 as
-# published by the Free Software Foundation.  You may not use, modify or
-# distribute this program under any other version of the GNU Lesser General
-# Public License.
+#-EXPORT VARS
+#   COMMA           "," -- useful in $(...) commands
+#   SPACE           " "
+#   OS              OS name (AIX, Darwin, HP-UX, Linux, Solaris)
+#   P4_ROOT         P4 client root directory
+#   PREFIX          Global imports directory (default: /usr/local)
+#   DESTDIR         Global exports directory (default: ${PREFIX})
+#   CONFIG          Combination of all settings that affect compiled binary formats.
 #
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU Lesser General Public License for more details.
+#-TARGETS
+#   all clean tags test  ... The usual.
 #
-# You should have received a copy of the GNU Lesser General Public License
-# along with this program; if not, write to the Free Software
-# Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
-#------------------------------------------------------------------------
+#   install         Install dependent .{a,h,so} files in ${DESTDIR}/{lib,include,lib}
+#   install.bin     Install dependencies in ${DESTDIR}/bin
+#
+#-ACTIONS
+#   defs            Print all builtin compiler macros (e.g. __LONG_MAX__, __x86_64)
+#   env             Print <var>=<value> for every name in ${env}
+#   sh              Execute ${SHELL} in the makefile's environment
+#   source          List all source files
+#
+# NOTES
+#   LDFLAGS,LDLIBS should *only* be used for standard OS libraries.
+#   Any other dependencies are flaky, with the usual security issues of -rpath/LD_LIBRARY_PATH
+#-----------------------------------------------------------------------------
 
-# RULES.MK input vars:
-#   $(BLD)      : |cover|debug|profile  -- default is optimized (release) build.
-#   $(all)      : submodules; "make clean" cleans up various side-effect files here.
-#   $(clean)    : extra files to clean
-#   $(install.{bin,etc,include,ini,sbin}) : files for "make install"
+# Each module sets "~ := <name>"  (note ":=" not "=").
+#   A parent makefile will set <name> to the module's directory.
+#   This sets $. = ${<name>}, defaulting to "."
+
+. := $(word 1,${$~} .)
+-include $./*.d
+# clean uses ${all} to delete *.d
+all             += $~
 
 ifndef RULES_MK
-RULES_MK:=1 # Allow repeated "-include".
+RULES_MK        := 1
+RULES           := $(word 1,${RULES} $./rules.mk)
 
-#---- Environment:
 export LD_LIBRARY_PATH
-export PS4      = \# # Prefix for "sh -x" output.
-export SHELL    = /bin/bash
 
-# Import from PREFIX, export to DESTDIR.
+COMMA           = ,
+OS              = $(shell uname -s)
+PS4             = \# # Prefix for "sh -x" output.
+SHELL           = bash
+SPACE           = $` # " "
 PREFIX          ?= /usr/local
-DESTDIR         ?= $(PREFIX)
-OS              != uname -s
+DESTDIR         ?= ${PREFIX}
 
-# HACK CentOS 5 comes with gcc 4.1, gcc 4.4 requires a special command
-#CC              = /usr/bin/gcc44
+CONFIG          ?= $(call Join,_,${OS} ${ARCH} $(filter-out cc gcc,$(notdir ${CC})) ${FORMAT})
 
-#--- *.$(BLD):
-CFLAGS.         = -O2
+#-----------------------------------------------------------------------------
+ARCH.Darwin    ?= universal
+ARCH           ?= ${ARCH.${OS}}
 
+BITS.Darwin.universal   = Universal
+BITS.Darwin.x8664       = x8664
+BITS.Linux.x8664        = 64
+BITS                    = ${BITS.${OS}.${ARCH}}
+
+#--- *.${FORMAT}:
+# For gcc 4.5+, use: -O3 -flto --- link-time optimization including inlining. Incompatible with -g.
+
+CFLAGS.         = -O3
 CFLAGS.cover    = --coverage -DNDEBUG
 LDFLAGS.cover   = --coverage
-
 CFLAGS.debug    = -O0 -Wno-uninitialized
 CPPFLAGS.debug  = -UNDEBUG
-
-CFLAGS.profile  = -pg -DNDEBUG
+CPPLAGS.profile = -DNDEBUG
+CFLAGS.profile  = -pg
 LDFLAGS.profile = -pg
 
-# PROFILE tests get stats on syscalls in their .pass files.
-exec.profile	= strace -cf
+# PROFILE tests get stats on syscalls appended to their .pass files.
+#   Darwin spells strace "dtruss".
+exec.profile    = $(shell which dtruss strace) -cf
 
-#--- *.$(OS):
-CFLAGS.Darwin   = 
+#--- *.${OS}:
+#XXX HP-UX gcc 4.2.3 does not grok -fstack-protector. Sigh.
+CFLAGS.AIX      = -fstack-protector --param ssp-buffer-size=4
+CFLAGS.Darwin   = ${CFLAGS.AIX}
+CFLAGS.HP-UX    =
+CFLAGS.Linux    = ${CFLAGS.AIX}
+CFLAGS.SunOS    = ${CFLAGS.AIX}
+
+#NOTE: defining SIZEOF_LONG_INT suppresses inclusion of UNIXODBC files.
+CPPFLAGS.AIX    = -DSIZEOF_LONG_INT=8
+CPPFLAGS.Darwin = -Xarch_i386 -DHAVE_LONG_LONG -Xarch_i386 -DSIZEOF_LONG_INT=4 -Xarch_x86_64 -DSIZEOF_LONG_INT=8
+CPPFLAGS.HP-UX  = $(CPPFLAGS.AIX}
+CPPFLAGS.Linux  = $(CPPFLAGS.AIX}
+CPPFLAGS.SunOS  = $(CPPFLAGS.AIX}
+
+#LDLIBS.Darwin   += -lstdc++.6
+#LDLIBS.Linux   += /usr/lib/libstdc++.so.6
+
+LDLIBS.Linux    = -lm
 LDLIBS.FreeBSD  = -lm
-LDLIBS.Linux    = -lm   # floor()
 
-# Before gcc 4.5, -Wno-unused-result was unknown and causes an error.
-Wno-unused-result != $(CC) -dumpversion | awk '$$0 >= 4.5 {print "-Wno-unused-result"}'
+#-----------------------------------------------------------------------------
+# -fPIC allows all .o's to be built into .so's.
 
-CFLAGS          += -ggdb -MMD -fdiagnostics-show-option -fstack-protector --param ssp-buffer-size=4 -fno-strict-aliasing
-CFLAGS          += -Wall -Werror -Wextra -Wcast-align -Wcast-qual -Wformat=2 -Wformat-security -Wmissing-prototypes -Wnested-externs -Wpointer-arith -Wredundant-decls -Wshadow -Wstrict-prototypes -Wno-unknown-pragmas -Wunused -Wwrite-strings
-CFLAGS          += -Wno-attributes -Wno-cast-qual -Wno-unknown-pragmas $(Wno-unused-result)
-CFLAGS          += $(CFLAGS.$(BLD)) $(CFLAGS.$(OS))
-CXXFLAGS        += $(filter-out -Wmissing-prototypes -Wnested-externs -Wstrict-prototypes, $(CFLAGS))
+CFLAGS          += ${CFLAGS_} -g -MMD -fPIC -pthread -fdiagnostics-show-option -fno-strict-aliasing
+CFLAGS          += -Wall -Wextra -Wcast-align -Wcast-qual -Wformat=2 -Wformat-security -Wmissing-prototypes -Wnested-externs -Wpointer-arith -Wshadow -Wstrict-prototypes -Wunused -Wwrite-strings
+CFLAGS          += -Wno-attributes -Wno-cast-qual -Wno-error -Wno-unknown-pragmas -Wno-unused-parameter
+CFLAGS          += ${CFLAGS.${FORMAT}} ${CFLAGS.${OS}} ${CFLAGS.${FORMAT}.${OS}} ${_CFLAGS}
 
-# -D_FORTIFY_SOURCE=2 on some platforms rejects any libc call whose return value is ignored.
-#   For some calls (system, write) this makes sense. For others (vasprintf), WTF?
-
-CPPFLAGS        += -I$(PREFIX)/include -D_FORTIFY_SOURCE=2 -D_GNU_SOURCE $(CPPFLAGS.$(BLD)) $(CPPFLAGS.$(OS))
-LDFLAGS         += -L$(PREFIX)/lib $(LDFLAGS.$(BLD)) $(LDFLAGS.$(OS))
-LDLIBS          += $(LDLIBS.$(OS))
-
-#---------------- Explicitly CANCEL EVIL BUILTIN RULES:
-%               : %.c 
+CPPFLAGS        += ${CPPFLAGS_} -I${PREFIX}/include -D_FORTIFY_SOURCE=2 -D_GNU_SOURCE ${CPPFLAGS.${FORMAT}} ${CPPFLAGS.${OS}} ${_CPPFLAGS}
+CXXFLAGS        += ${CXXFLAGS_} $(filter-out -Wmissing-prototypes -Wnested-externs -Wstrict-prototypes, ${CFLAGS}) ${_CXXFLAGS}
+LDFLAGS         += ${LDFLAGS_}  -pthread  -L${PREFIX}/lib  ${LDFLAGS.${FORMAT}}  ${LDFLAGS.${OS}}  ${_LDFLAGS}
+LDLIBS          += ${LDLIBS_}   -lstdc++  ${LDLIBS.${OS}}   ${_LDLIBS}
+ 
+#-----------------------------------------------------------------------------
+# Explicitly CANCEL THESE EVIL BUILTIN RULES:
+%               : %.c
 %               : %.cpp
 %.c             : %.l
 %.c             : %.y
 %.r             : %.l
-#----------------
-.PHONY          : all clean cover debug gccdefs install profile source tags test
+
+#-----------------------------------------------------------------------------
+.PHONY          : all clean cover debug defs env install profile sh source tags test
 .DEFAULT_GOAL   := all
 
-# $(all) contains all subproject names. It can be used in ACTIONS but not RULES,
-#   since it accumulates across "include */GNUmakefile"'s.
+# ${all} contains subproject names. It can be used in ACTIONS but not RULES,
+#   since it accumulates across every "include <submakefile>"
+# ${junkfiles} is how to get metachars (commas) through the ${addsuffix...} call.
+junkfiles       = {gmon.out,tags,*.[dis],*.fail,*.gcda,*.gcno,*.gcov,*.prof}
 
-# All $(BLD) types use the same pathnames for binaries.
-# To switch from release to debug, first "make clean".
-# To extract and save exports, "make install DESTDIR=rel".
+all             :;@echo "$@ done for FORMAT='${FORMAT}'"
 
-all             :;@echo "$@ done for BLD='$(BLD)'"
-junkfiles       = gmon.out,tags,*.fail,*.gcda,*.gcno,*.gcov,*.prof
-clean           :;@rm -rf $(shell $(MAKE) -nps all test cover profile | sed -n '/^# I/,$${/^[^\#\[%.][^ %]*: /s/:.*//p;}') \
-                          $(addsuffix /{$(junkfiles)}, $(all))  $(clean)  $(filter %.d, $(MAKEFILE_LIST))
+clean           :;@( ${MAKE} -nps all install test | sed -n '/^# I/,$${/^[^\#\[%.][^ %]*: /s/:.*//p;}'; \
+                    echo ${clean} $(addsuffix /${junkfiles}, $(foreach _,${all},${$_})) $(filter %.d,${MAKEFILE_LIST}) ) | xargs rm -rf
 
-cover           : BLD := cover
-cover           : test    ; gcov -bcp $($@) | covsum    # DOES NOT WORK
+cover           : FORMAT := cover
+%.cover         : %.test    ; gcov -bcp ${$@} | covsum
 
-debug           : BLD := debug
-debug           : all
-
-#---- Macro functions:
 # Expand: translate every occurrence of "${var}" in a file to its env value (or ""):
+#   E.G.   ${Expand} foo.tmpl >foo.ini
 Expand          = perl -pe 's/ (?<!\\) \$${ ([A-Z_][A-Z_0-9]*) } / $$ENV{$$1} || ""/geix'
+Join            = $(subst ${SPACE},$1,$(strip $2))
 
-Install         = if [ "$(strip $1)" ]; then mkdir -p $2; pax -rwpe -s:.*/:: $1 $2; fi
-install         : $(addprefix install., bin etc include ini lib man1 man3 sbin)
-install.man%    :;$(call Install, $($@), $(DESTDIR)/man/$(@:install.))
-install.%       :;$(call Install, $($@), $(DESTDIR)/$(@:install.))
+# Install: do the obvious for include and lib; "bin" files are not obvious ...
+Install         = $(if $2, mkdir -p $1; pax -rwpe -s:.*/:: $2 $1)
+install         : $(addprefix install., bin man1 man3 sbin) \
+                ; $(call Install,${DESTDIR}/include, $(filter %.h,$^) $(filter %.hpp,$^)) \
+                ; $(call Install,${DESTDIR}/lib,     $(filter %.a,$^) $(filter %.so,$^) $(filter %.dylib,$^))
 
-profile         : BLD := profile
-%.profile       : test    ;@for x in $($*.test:.pass=); do gprof -b $$x >$$x.prof; done
+# install.% cannot be .PHONY because there is no pattern expansion of phony targets.
+install.bin     :           ; $(call Install,${DESTDIR}/bin,$^)
+install.man%    :           ; $(call Install,${DESTDIR}/man/$(subst install.,,$@),$^)
+install.%       :           ; $(call Install,${DESTDIR}/$(subst install.,,$@),$^)
 
-# GMAKE trims leading "./" from $*.; $(*D)/$(*F) restores it.
-%.pass          : %         ; rm -f $@; $(exec.$(BLD)) $(*D)/$(*F) >& $*.fail && mv -f $*.fail $@
+profile         : FORMAT := profile
+profile         : test      ;@for x in ${$*.test:.pass=}; do case `file $$x` in *script*) ;; *) gprof -b $$x >$$x.prof; esac; done
 
-# To build a .so, "make clean" first, to ensure all .o files compiled with -fPIC
-%.so            : CFLAGS := -fPIC $(filter-out $(CFLAGS.cover) $(CFLAGS.profile), $(CFLAGS))
-%.so            : %.o       ; $(CC) $(LDFLAGS) -o $@ -shared $< $(LDLIBS)
-%.so            : %.a       ; $(CC) $(CFLAGS)  -o $@ -shared -Wl,-whole-archive $< -Wl,-no-whole-archive $(LDLIBS)
-%.a             :           ; [ "$^" ] && ar crs $@ $(filter %.o,$^)
+%.test          : ${%.test}
+
+# GMAKE trims leading "./" from $* ; ${*D}/${*F} restores it, so no need to fiddle with $PATH.
+%.pass          : %         ; rm -f $@; ${exec.${FORMAT}} ${*D}/${*F} >& $*.fail && mv -f $*.fail $@
+
+%.so            : %.o       ; ${CC} ${LDFLAGS} -o $@ -shared $< ${LDLIBS}
+%.so            : %.a       ; ${CC} ${CFLAGS}  -o $@ -shared -Wl,-whole-archive $< ${LDLIBS} -Wl,-no-whole-archive
+%.a             :           ; $(if $(filter %.o,$^), ar crs $@ $(filter %.o,$^))
 %.yy.c          : %.l       ; flex -o $@ $<
-%.tab.c 	    : %.y       ; bison $<
-%/..            :           ;@mkdir -p $(@D)
+%.tab.c         : %.y       ; bison $<
+%/..            :           ;@mkdir -p ${@D}
 %               : %.gz      ; gunzip -c $^ >$@
 
 # Ensure that intermediate files (e.g. the foo.o caused by "foo : foo.c")
 #  are not auto-deleted --- causing a re-compile every second "make".
-.SECONDARY  	: 
+.SECONDARY      :
 
-#---------------- TOOLS:
-# NOTE: "source" MUST be set with "=", not ":=", else MAKE recurses infinitely.
-source          = $(filter-out %.d, $(shell $(MAKE) -nps all test cover profile | sed -n '/^. Not a target/{n;/^[^.*][^ ]*:/s/:.*//p;}'))
+#---------------- Handy make-related commands.
+# defs - list gcc's builtin macros
+# env - environment relevant to the make. "sort -u" because env entries may not be unique -- "env +=" in multiple makefiles.
+# sh - invoke a shell within the makefile's env:
+# source - list files used and not built by the "make". Explicitly filters out "*.d" files.
+# NOTE: "make tags" BEFORE "make all" is incomplete because *.h dependencies are only in *.d files.
 
-# gccdefs : all gcc internal #defines.
-gccdefs         :;@$(CC) $(CPPFLAGS) -E -dM - </dev/null | cut -c8- | sort
+defs            :;@${CC} ${CPPFLAGS} -E -dM - </dev/null | cut -c8- | sort
+env             :;@($(foreach _,${env},echo $_=${$_};):) | sort -u
+sh              :;@PS1='${PS1} [make] ' ${SHELL}
+source          :;@$(if $^, ls $^;) ${MAKE} -nps all test cover profile | sed -n '/^. Not a target/{ n; /^install/d; /^[^ ]*\.d:/!{ /^[^.*][^ ]*:/s/:.*//p; }; }' | sort -u
+tags            :; ctags -B $(filter %.c %.cpp %.h %.hpp, $^)
 
-tags            :; ctags $(filter %.c %.cpp %.h, $(source))
+# "make SomeVar." prints ${SomeVar}
+%.              :;@echo '${$*}'
 
-# sh : invoke a shell within the makefile's env:
-sh   		    :; PS1='$(PS1) [make] ' $(SHELL)
-
-# "make SomeVar." prints $(SomeVar)
-%.              :;@echo '$($*)'
+#TODO: somehow pick up all the target-specific flags for *.o, for *.[Isi]
 
 # %.I lists all (recursive) #included files; e.g.: "make /usr/include/errno.h.I"
-%.I             : %.c       ;@ls -1 2>&- `$(CC)  $(CPPFLAGS) -M $<` ||:
-%.I             : %.cpp     ;@ls -1 2>&- `$(CXX) $(CPPFLAGS) -M $<` ||:
-%.i             : %.c       ; $(COMPILE.c)   -E -o $@ $<
-%.i             : %.cpp     ; $(COMPILE.cpp) -E -o $@ $<
-%.s             : %.c       ; $(COMPILE.c)   -S -o $@ $< && deas $@
-%.s             : %.cpp     ; $(COMPILE.cpp) -S -o $@ $< && deas $@
+%.I             : %.c       ;@ls -1 2>&- `${CC}  ${CPPFLAGS} ${TARGET_ARCH} -M $<` | sort -u
+%.I             : %.cpp     ;@ls -1 2>&- `${CXX} ${CPPFLAGS} ${TARGET_ARCH} -M $<` | sort -u
+%.i             : %.c       ; ${COMPILE.c}   -E -o $@ $<
+%.i             : %.cpp     ; ${COMPILE.cpp} -E -o $@ $<
+%.s             : %.c       ; $(filter-out -Werror,${COMPILE.c}) -DNDEBUG -S -o $@ $< && deas $@
+%.s             : %.cpp     ; ${COMPILE.cpp} -S -o $@ $< && deas $@
 
-endif
+endif # RULES_MK
 # vim: set nowrap :
