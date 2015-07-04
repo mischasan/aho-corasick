@@ -1,4 +1,4 @@
-~ = acism
+~ := acism
 include $(word 1, ${RULES} rules.mk)
 
 #---------------- PRIVATE VARS:
