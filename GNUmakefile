@@ -15,4 +15,6 @@ libacism.a      : acism.o  acism_create.o  acism_dump.o  acism_file.o
 acism_t.pass    : ${acism.x}  words
 ${acism.x}      : libacism.a  msutil.o  tap.o
 
+#_CFLAGS = -DACISM_SIZE=8
+
 # vim: set nowrap :

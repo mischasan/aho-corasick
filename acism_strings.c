@@ -2,7 +2,7 @@
 ** Copyright (C) 2009-2013 Mischa Sandberg <mischasan@gmail.com>
 **
 ** This program is free software; you can redistribute it and/or modify
-** it under the terms of the GNU Lesser General Public License Version as
+** it under the terms of the GNU Lesser General Public License Version 3 as
 ** published by the Free Software Foundation.  You may not use, modify or
 ** distribute this program under any other version of the GNU Lesser General
 ** Public License.

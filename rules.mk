@@ -90,13 +90,6 @@ CFLAGS.HP-UX    =
 CFLAGS.Linux    = ${CFLAGS.AIX}
 CFLAGS.SunOS    = ${CFLAGS.AIX}
 
-#NOTE: defining SIZEOF_LONG_INT suppresses inclusion of UNIXODBC files.
-CPPFLAGS.AIX    = -DSIZEOF_LONG_INT=8
-CPPFLAGS.Darwin = -Xarch_i386 -DHAVE_LONG_LONG -Xarch_i386 -DSIZEOF_LONG_INT=4 -Xarch_x86_64 -DSIZEOF_LONG_INT=8
-CPPFLAGS.HP-UX  = ${CPPFLAGS.AIX}
-CPPFLAGS.Linux  = ${CPPFLAGS.AIX}
-CPPFLAGS.SunOS  = ${CPPFLAGS.AIX}
-
 #LDLIBS.Darwin   += -lstdc++.6
 #LDLIBS.Linux   += /usr/lib/libstdc++.so.6
 

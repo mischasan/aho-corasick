@@ -2,7 +2,7 @@
 ** Copyright (C) 2009-2014 Mischa Sandberg <mischasan@gmail.com>
 **
 ** This program is free software; you can redistribute it and/or modify
-** it under the terms of the GNU Lesser General Public License Version as
+** it under the terms of the GNU Lesser General Public License Version 3 as
 ** published by the Free Software Foundation.  You may not use, modify or
 ** distribute this program under any other version of the GNU Lesser General
 ** Public License.
@@ -25,6 +25,19 @@
 
 typedef int (*qsort_cmp)(const void *, const void *);
 
+// "Width" specifier for different plats 
+#if __LONG_MAX__ == 9223372036854775807LL
+#   ifdef __APPLE__
+#       define F64  "ll"
+#   else
+#       define F64  "l"
+#   endif
+#elif __LONG_MAX__ == 2147483647L || defined(_LONG_LONG) || defined(__sun) // AIX 6.1 ...
+#   define F64      "ll"
+#else
+#   error need to define F64
+#endif
+
 #ifndef ACISM_SIZE
 #   define ACISM_SIZE 4
 #endif
@@ -33,10 +46,12 @@ typedef int (*qsort_cmp)(const void *, const void *);
     typedef uint64_t TRAN, STATE, STRNO;
 #   define SYM_BITS 9U
 #   define SYM_MASK 511
+#   define FNO      F64
 #else
     typedef uint32_t TRAN, STATE, STRNO;
 #   define SYM_BITS psp->sym_bits
 #   define SYM_MASK psp->sym_mask
+#   define FNO      
 #endif
 
 typedef uint16_t  SYMBOL;
