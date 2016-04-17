@@ -20,6 +20,10 @@
 #ifndef ACISM_H
 #define ACISM_H
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 // "acism" uses MEMREF {ptr,len} bytevec structs for "string" args,
 // rather than NUL-terminated "C" strings.
 
@@ -69,5 +73,9 @@ typedef enum {
 void acism_dump(ACISM const*, PS_DUMP_TYPE, FILE*, MEMREF const*pattv);
 
 #define ACISM_STATS 1   // Collect perf stats during acism_create (see acism_dump).
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif//ACISM_H
