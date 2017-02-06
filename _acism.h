@@ -87,7 +87,7 @@ struct acism {
 #include "acism.h"
 
 // p_size: size of tranv + hashv
-static inline unsigned p_size(ACISM const *psp)
+static inline size_t p_size(ACISM const *psp)
 { return psp->hash_size * sizeof*psp->hashv
        + psp->tran_size * sizeof*psp->tranv; }
 
