@@ -37,10 +37,10 @@ static inline int bitwid(unsigned u)
     if (u & 0x00000002) ret++;
     return ret;
 }
+
 static void   fill_symv(ACISM*, MEMREF const*, int ns);
 static int    create_tree(TNODE*, SYMBOL const*symv, MEMREF const*strv, int nstrs);
 static void   add_backlinks(TNODE*, TNODE**, TNODE**);
-static void   prune_backlinks(TNODE*);
 static int    interleave(TNODE*, int nnodes, int nsyms, TNODE**, TNODE**);
 static void   fill_tranv(ACISM*, TNODE const*);
 static void   fill_hashv(ACISM*, TNODE const*, int nn);
@@ -83,11 +83,6 @@ acism_create(MEMREF const* strv, int nstrs)
     // v1, v2: breadth-first work vectors for add_backlink and interleave.
     int nhash, i = (nstrs + 1) * sizeof*tp;
     add_backlinks(troot, v1 = malloc(i), v2 = malloc(i));
-
-    for (tp = troot + nnodes, nhash = 0; --tp > troot;) {
-        prune_backlinks(tp);
-        nhash += tp->match && tp->child;
-    }
 
     // Calculate each node's offset in tranv[]:
     psp->tran_size = interleave(troot, nnodes, psp->nsyms, v1, v2);
@@ -225,40 +220,6 @@ add_backlinks(TNODE *troot, TNODE **v1, TNODE **v2)
         }
         *dpp = 0;
         tmp = v1; v1 = v2; v2 = tmp;
-    }
-}
-
-static void
-prune_backlinks(TNODE *tp)
-{
-    if (tp->x.nrefs || !tp->child)
-        return;
-
-    TNODE *bp;
-        // (bp != bp->back IFF bp != troot)
-    while ((bp = tp->back) && !bp->match && bp != bp->back) {
-        HIT("backlinks");
-        TNODE *cp = tp->child, *pp = bp->child;
-
-        // Search for a child of bp that's not a child of tp
-        for (; cp && pp && pp->sym >= cp->sym; cp = cp->next) {
-            if (pp->sym == cp->sym) {
-                if (pp->match && cp->is_suffix) break;
-                pp = pp->next;
-            }
-        }
-
-        if (pp) break;
-
-        // So, target of back link is not a suffix match
-        // of this node, and its children are a subset
-        // of this node's children: prune it.
-        HIT("pruned");
-        if ((tp->back = bp->back)) {
-            tp->back->x.nrefs++;
-            if (!--bp->x.nrefs)
-                prune_backlinks(bp);
-        }
     }
 }
 
