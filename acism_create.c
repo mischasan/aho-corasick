@@ -209,7 +209,7 @@ add_backlinks(TNODE *troot, TNODE **v1, TNODE **v2)
                 TNODE *bp = NULL;
                 *dpp++ = dstp;
                 for (tp = srcp->back; tp; tp = tp->back)
-                   if ((bp = find_child(tp, dstp->sym)) && bp->child) break;
+                   if ((bp = find_child(tp, dstp->sym)) && (bp->child || !dstp->child) break;
                 if (!bp)
                     bp = troot;
 
