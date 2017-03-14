@@ -207,10 +207,20 @@ add_backlinks(TNODE *troot, TNODE **v1, TNODE **v2)
         while ((srcp = *spp++)) {
             for (dstp = srcp->child; dstp; dstp = dstp->next) {
                 TNODE *bp = NULL;
-                *dpp++ = dstp;
+                if (dstp->child)
+                    *dpp++ = dstp;
+
+                // Go through the parent (srcp) node's backlink chain,
+                //  looking for a useful backlink for the child (dstp).
+                // If the parent (srcp) has a backlink to (tp), and (tp) has a child (with children)
+                //  matching the transition sym for (srcp -> dstp),
+                //  then it is a useful backlink for the child (dstp).
+                // Note that backlinks do not point at the suffix match;
+                //  they point at the PARENT of that match.
+
                 for (tp = srcp->back; tp; tp = tp->back)
-                   if ((bp = find_child(tp, dstp->sym)) && (bp->child || !dstp->child)) 
-                       break;
+                    if ((bp = find_child(tp, dstp->sym)) && bp->child)
+                        break;
                 if (!bp)
                     bp = troot;
 
