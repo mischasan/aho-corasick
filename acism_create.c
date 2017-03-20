@@ -81,9 +81,14 @@ acism_create(MEMREF const* strv, int nstrs)
     NOTE(nnodes);
 
     // v1, v2: breadth-first work vectors for add_backlink and interleave.
-    int nhash, i = (nstrs + 1) * sizeof*tp;
+    int i = (nstrs + 1) * sizeof*tp;
     add_backlinks(troot, v1 = malloc(i), v2 = malloc(i));
-
+    
+    int     nhash = 0;
+    TNODE*  tp = troot + nnodes;
+    while (--tp > troot)
+        nhash += tp->match && tp->child;
+    
     // Calculate each node's offset in tranv[]:
     psp->tran_size = interleave(troot, nnodes, psp->nsyms, v1, v2);
     if (bitwid(psp->tran_size + nstrs - 1) + SYM_BITS > sizeof(TRAN)*8 - 2)
