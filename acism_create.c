@@ -71,7 +71,7 @@ extern PSSTAT psstat[];
 ACISM*
 acism_create(MEMREF const* strv, int nstrs)
 {
-    TNODE *tp, **v1 = NULL, **v2 = NULL;
+    TNODE **v1 = NULL, **v2 = NULL;
     ACISM *psp = calloc(1, sizeof*psp);
 
     fill_symv(psp, strv, nstrs);
