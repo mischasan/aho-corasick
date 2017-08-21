@@ -81,7 +81,7 @@ acism_create(MEMREF const* strv, int nstrs)
     NOTE(nnodes);
 
     // v1, v2: breadth-first work vectors for add_backlink and interleave.
-    int i = (nstrs + 1) * sizeof*tp;
+    int i = (nstrs + 1) * sizeof(TNODE);
     add_backlinks(troot, v1 = malloc(i), v2 = malloc(i));
     
     int     nhash = 0;
