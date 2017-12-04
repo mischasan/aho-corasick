@@ -39,8 +39,8 @@ I originally called it "psearch", but found that name was overused by other auth
 LICENSE
 -------
 
-Though I've had strong suggestions to go with BSD license, I'm going with GPL2 until I figure out
-how to keep in touch with people who download and use the code. Hence the "CONTACT ME IF..." line in the license.
+LGPL v3
+
 
 GETTING STARTED
 ---------------
