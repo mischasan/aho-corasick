@@ -47,6 +47,10 @@
 #ifndef MSUTIL_H
 #define MSUTIL_H
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #include <stdint.h>
 // Defeat gcc 4.4 cdefs.h defining __wur i.e. __attribute((unused-result))
 // for system calls where you just don't care (e.g. vasprintf...)
@@ -86,5 +90,9 @@ char const *getprogname(void);  // BSD-equivalent
 
 extern int  const nerrnames;
 extern char const *errname[];
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif//MSUTIL_H

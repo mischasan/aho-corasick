@@ -27,6 +27,10 @@
 #ifndef __TAP_H__
 #define __TAP_H__
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #include <stddef.h>
 #include <stdio.h>
 
@@ -318,6 +322,10 @@ tap_ev       tap_ev_queue_shift(      tap_ev_queue queue);
 tap_ev       tap_ev_queue_shift_next( tap_ev_queue queue, const char * identifier);
 
 #define tap_test_case_name(name) tap_set_test_case_name(name)
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* C99 or gcc */
 #endif /* __TAP_H__  */
