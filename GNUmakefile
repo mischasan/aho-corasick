@@ -12,6 +12,7 @@ clean           += *.tmp
 
 #---------------- PRIVATE RULES:
 libacism.a      : acism.o  acism_create.o  acism_dump.o  acism_file.o
+libacism.so: acism.o  acism_create.o  acism_dump.o  acism_file.o
 acism_t.pass    : ${acism.x}  words
 ${acism.x}      : libacism.a  msutil.o  tap.o
 

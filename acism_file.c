@@ -49,6 +49,7 @@ acism_load(FILE *fp)
             && !memcmp(psp, "ACMischa", 8)
             && (set_tranv(psp, malloc(p_size(psp))), 1)
             && fread(psp->tranv, p_size(psp), 1, fp)) {
+        assign_char_mod_func(psp);
         return psp;
     }
 
@@ -66,6 +67,7 @@ acism_mmap(FILE *fp)
     ACISM *psp = malloc(sizeof*psp);
     *psp = *(ACISM*)mp;
     psp->flags |= IS_MMAP;
+    assign_char_mod_func(psp);
     if (memcmp(psp, "ACMischa", 8)) {
         acism_destroy(psp);
         return NULL;

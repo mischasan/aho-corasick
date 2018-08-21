@@ -25,8 +25,8 @@ on_match(int strnum, int textpos, MEMREF const *pattv)
 int
 main(int argc, char **argv)
 {
-    if (argc < 2 || argc > 4)
-        usage("pattern_file [nmatches [match.log]]\n" "Creates acism.tmp");
+    if (argc < 2 || argc > 5)
+        usage("pattern_file [c] [nmatches [match.log]]\n" "If [c] is provided, search will be case-insensitive\n" "Creates acism.tmp");
 
     MEMBUF patt = chomp(slurp(argv[1]));
     if (!patt.ptr)
@@ -35,11 +35,20 @@ main(int argc, char **argv)
     int npatts;
     MEMREF *pattv = refsplit(patt.ptr, '\n', &npatts);
 
+    unsigned case_sensitive = 1;
+    int offset = 2;
+    if (argc >= 3 && argv[2][0] == 'c')
+    {
+        fprintf(stderr, "Case sensitive mode disabled\n");
+        ++offset;
+        case_sensitive = 0;
+    }
+
     double t = tick();
-    ACISM *psp = acism_create(pattv, npatts);
+    ACISM *psp = acism_create_full(pattv, npatts, case_sensitive);
     t = tick() - t;
 
-    plan_tests(argc < 3 ? 1 : 3);
+    plan_tests(argc < (offset+1) ? 1 : 3);
 
     ok(psp, "acism_create(pattv[%d]) compiled, in %.3f secs", npatts, t);
     acism_dump(psp, PS_STATS, stderr, pattv);
@@ -57,16 +66,16 @@ main(int argc, char **argv)
     acism_save(fp, psp);
     fclose(fp);
 
-    if (argc > 2) {
+    if (argc > offset) {
 
         int fd = open(argv[1], O_RDONLY);
-        if (fd < 0) return fprintf(stderr, "acism_x: %s: cannot open: %s\n", argv[2], strerror(errno));
+        if (fd < 0) return fprintf(stderr, "acism_x: %s: cannot open: %s\n", argv[offset], strerror(errno));
         
         static char buf[1024*1024];
         MEMREF text = {buf, 0};
         int state = 0;
         double elapsed = 0, start = tick();
-        if (argc > 3) matchfp = fopen(argv[3], "w");
+        if (argc > (offset + 1)) matchfp = fopen(argv[offset + 1], "w");
         while (0 < (text.len = read(fd, buf, sizeof buf))) {
             t = tick();
             (void)acism_more(psp, text, (ACISM_ACTION*)on_match, pattv, &state);
@@ -78,7 +87,7 @@ main(int argc, char **argv)
         if (matchfp) fclose(matchfp);
         ok(text.len == 0, "text_file scanned in 1M blocks; read(s) took %.3f secs", tick() - start - elapsed);
 
-        int expected = argc > 2 ? atoi(argv[2]) : actual;
+        int expected = atoi(argv[offset]);
         if (!ok(actual == expected, "%d matches found, in %.3f secs", expected, elapsed))
             diag("actual: %d\n", actual);
     }

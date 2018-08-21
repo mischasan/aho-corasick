@@ -31,7 +31,7 @@ acism_more(ACISM const *psp, MEMREF const text,
     int ret = 0;
 
     while (cp < endp) {
-        _SYMBOL sym = psp->symv[(uint8_t)*cp++];
+        _SYMBOL sym = psp->symv[psp->char_mod(*cp++)];
         if (!sym) {
             // Input byte is not in any pattern string.
             state = ROOT;
