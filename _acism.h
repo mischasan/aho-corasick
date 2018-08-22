@@ -67,11 +67,17 @@ typedef struct { STATE state; STRNO strno; } STRASH;
 
 typedef enum { BASE=2, USED=1 } USES;
 
+typedef uint8_t (*char_mod_func)(const char character);
+uint8_t       char_mod_none(const char character);
+uint8_t       char_mod_upper(const char character);
+
 struct acism {
     TRAN*   tranv;
     STRASH* hashv;
+    char_mod_func char_mod;
     unsigned flags;
 #   define IS_MMAP 1
+#   define IS_CASE_SENSITIVE 2
 
 #if ACISM_SIZE < 8
     TRAN sym_mask;
@@ -116,5 +122,8 @@ static inline int t_strno(ACISM const *psp, TRAN t)
 
 static inline _SYMBOL t_valid(ACISM const *psp, TRAN t)
     { return !t_sym(psp, t); }
+
+static inline void assign_char_mod_func(ACISM *psp)
+    { psp->char_mod = psp->flags & IS_CASE_SENSITIVE ? char_mod_none : char_mod_upper; }
 
 #endif//_ACISM_H

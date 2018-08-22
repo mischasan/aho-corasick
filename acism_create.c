@@ -39,7 +39,7 @@ static inline int bitwid(unsigned u)
 }
 
 static void   fill_symv(ACISM*, MEMREF const*, int ns);
-static int    create_tree(TNODE*, SYMBOL const*symv, MEMREF const*strv, int nstrs);
+static int    create_tree(ACISM*, TNODE*, SYMBOL const*symv, MEMREF const*strv, int nstrs);
 static void   add_backlinks(TNODE*, TNODE**, TNODE**);
 static int    interleave(TNODE*, int nnodes, int nsyms, TNODE**, TNODE**);
 static void   fill_tranv(ACISM*, TNODE const*);
@@ -67,17 +67,40 @@ extern PSSTAT psstat[];
 # define HIT(id) (void)0
 #endif //ACISM_STATS
 
+
+uint8_t char_mod_none(const char character)
+{
+    return (uint8_t)character;
+}
+
+uint8_t char_mod_upper(const char character)
+{
+    if ((character >= 'a') && (character <= 'z'))
+    {
+        return (uint8_t)(character) - 32;  // 32 is the difference between a and A.
+    }
+    return (uint8_t)character;
+}
+
 //--------------|---------------------------------------------
 ACISM*
 acism_create(MEMREF const* strv, int nstrs)
 {
+    return acism_create_full(strv, nstrs, 1);
+}
+
+ACISM*
+acism_create_full(MEMREF const* strv, int nstrs, unsigned case_sensitive)
+{
     TNODE **v1 = NULL, **v2 = NULL;
     ACISM *psp = calloc(1, sizeof*psp);
+    psp->flags |= (case_sensitive != 0) * IS_CASE_SENSITIVE;
+    assign_char_mod_func(psp);
 
     fill_symv(psp, strv, nstrs);
     TNODE *troot = calloc(psp->nchars + 1, sizeof*troot);
 
-    int nnodes = create_tree(troot, psp->symv, strv, nstrs);
+    int nnodes = create_tree(psp, troot, psp->symv, strv, nstrs);
     NOTE(nnodes);
 
     // v1, v2: breadth-first work vectors for add_backlink and interleave.
@@ -142,7 +165,7 @@ fill_symv(ACISM *psp, MEMREF const *strv, int nstrs)
     for (i = 0; i < 256; ++i) frv[i] = (FRANK){0,i};
     for (i = 0; i < nstrs; ++i)
         for (psp->nchars += j = strv[i].len; --j >= 0;)
-            frv[(uint8_t)strv[i].ptr[j]].freq++;
+            frv[psp->char_mod(strv[i].ptr[j])].freq++;
 
     qsort(frv, 256, sizeof*frv, (qsort_cmp)frcmp);
 
@@ -156,7 +179,7 @@ fill_symv(ACISM *psp, MEMREF const *strv, int nstrs)
 }
 
 static int
-create_tree(TNODE *Tree, SYMBOL const *symv, MEMREF const *strv, int nstrs)
+create_tree(ACISM* psp, TNODE *Tree, SYMBOL const *symv, MEMREF const *strv, int nstrs)
 {
     int i, j;
     TNODE *nextp = Tree + 1;
@@ -165,7 +188,7 @@ create_tree(TNODE *Tree, SYMBOL const *symv, MEMREF const *strv, int nstrs)
         TNODE *tp = Tree;
 
         for (j = 0; tp->child && j < (int)strv[i].len; ++j) {
-            SYMBOL sym = symv[(uint8_t)strv[i].ptr[j]];
+            SYMBOL sym = symv[psp->char_mod(strv[i].ptr[j])];
 
             if (sym < tp->child->sym) {
                 // Prep to insert new node before tp->child
@@ -188,7 +211,7 @@ create_tree(TNODE *Tree, SYMBOL const *symv, MEMREF const *strv, int nstrs)
 
         for (; j < (int) strv[i].len; ++j) {
             tp = tp->child = nextp++;
-            tp->sym = symv[(uint8_t)strv[i].ptr[j]];
+            tp->sym = symv[psp->char_mod(strv[i].ptr[j])];
             tp->back = Tree;
         }
 
