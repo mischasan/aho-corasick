@@ -18,11 +18,17 @@
 */
 #include "_acism.h"
 
+typedef enum { BASE=2, USED=1 } USES;
+
 typedef struct tnode {
     struct tnode *child, *next, *back;
-    union { unsigned nrefs; STATE state; } x;
-    STRNO match;
-    SYMBOL sym, is_suffix;
+    // nrefs was used in "prune_backlinks".
+    //  It will be used again in "curtail".
+    unsigned    nrefs;
+    STATE       state;
+    STRNO       match;
+    SYMBOL      sym;
+    char        is_suffix;      // "bool"
 } TNODE;
 
 //--------------|---------------------------------------------
@@ -51,7 +57,7 @@ static TNODE* find_child(TNODE*, SYMBOL);
 static inline void
 set_tran(ACISM *psp, STATE s, SYMBOL sym, int match, int suffix, TRAN ns)
 {
-    psp->tranv[s + sym] = sym   | (match ? IS_MATCH : 0) 
+    psp->tranv[s + sym] = sym    | (match ? IS_MATCH : 0) 
                                 | (suffix ? IS_SUFFIX : 0)
                                 | (ns << SYM_BITS);
 }
@@ -149,6 +155,7 @@ fill_symv(ACISM *psp, MEMREF const *strv, int nstrs)
     for (i = 256; --i >= 0 && frv[i].freq;)
         psp->symv[frv[i].rank] = ++psp->nsyms;
     ++psp->nsyms;
+
 #if ACISM_SIZE < 8
     psp->sym_bits = bitwid(psp->nsyms);
     psp->sym_mask = ~(-1 << psp->sym_bits);
@@ -209,6 +216,7 @@ add_backlinks(TNODE *troot, TNODE **v1, TNODE **v2)
 
     while (*v1) {
         TNODE **spp = v1, **dpp = v2, *srcp, *dstp;
+
         while ((srcp = *spp++)) {
             for (dstp = srcp->child; dstp; dstp = dstp->next) {
                 TNODE *bp = NULL;
@@ -217,20 +225,21 @@ add_backlinks(TNODE *troot, TNODE **v1, TNODE **v2)
 
                 // Go through the parent (srcp) node's backlink chain,
                 //  looking for a useful backlink for the child (dstp).
-                // If the parent (srcp) has a backlink to (tp), and (tp) has a child (with children)
-                //  matching the transition sym for (srcp -> dstp),
-                //  then it is a useful backlink for the child (dstp).
+                // If the parent (srcp) has a backlink to (tp),
+                //  and (tp) has a child matching the transition sym 
+                //  for (srcp -> dstp), then it is a useful backlink 
+                //  for the child (dstp).
                 // Note that backlinks do not point at the suffix match;
                 //  they point at the PARENT of that match.
 
                 for (tp = srcp->back; tp; tp = tp->back)
-                    if ((bp = find_child(tp, dstp->sym)) && bp->child)
+                    if ((bp = find_child(tp, dstp->sym)))
                         break;
                 if (!bp)
                     bp = troot;
 
                 dstp->back = dstp->child ? bp : tp ? tp : troot;
-                dstp->back->x.nrefs++;
+                dstp->back->nrefs++;
                 dstp->is_suffix = bp->match || bp->is_suffix;
             }
         }
@@ -244,7 +253,7 @@ interleave(TNODE *troot, int nnodes, int nsyms, TNODE **v1, TNODE **v2)
 {
     unsigned usev_size = nnodes + nsyms;
     char *usev = calloc(usev_size, sizeof*usev);
-    STATE last_trans = 0, startv[nsyms][2];
+    STATE last_trans = 0, startv[257][2] = { 0 };
     TNODE *cp, **tmp;
 
     memset(startv, 0, nsyms * sizeof*startv);
@@ -285,7 +294,7 @@ interleave(TNODE *troot, int nnodes, int nsyms, TNODE **v1, TNODE **v2)
                 // No child needs an in-use slot? We're done.
                 if (!cp) break;
             }
-            tp->x.state = pos;
+            tp->state = pos;
 
             // Mark node's base and children as used:
             usev[pos] |= need;
@@ -322,7 +331,7 @@ fill_hashv(ACISM *psp, TNODE const treev[], int nnodes)
 
     // First pass: insert without resolving collisions.
     for (i = 0; i < nnodes; ++i) {
-        STATE base = treev[i].x.state;
+        STATE base = treev[i].state;
         TNODE const *tp;
         for (tp = treev[i].child; tp; tp = tp->next) {
             if (tp->match && tp->child) {
@@ -349,12 +358,12 @@ fill_tranv(ACISM *psp, TNODE const*tp)
     TNODE const *cp = tp->child;
 
     if (cp && tp->back)
-            set_tran(psp, tp->x.state, 0, 0, 0, tp->back->x.state);
+            set_tran(psp, tp->state, 0, 0, 0, tp->back->state);
 
     for (; cp; cp = cp->next) {
         //NOTE: cp->match is (strno+1) so that !cp->match means "no match".
-        set_tran(psp, tp->x.state, cp->sym, cp->match, cp->is_suffix,
-                   cp->child ? cp->x.state : cp->match - 1 + psp->tran_size);
+        set_tran(psp, tp->state, cp->sym, cp->match, cp->is_suffix,
+                   cp->child ? cp->state : cp->match - 1 + psp->tran_size);
         if (cp->child)
             fill_tranv(psp, cp);
     }

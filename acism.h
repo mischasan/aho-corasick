@@ -20,6 +20,15 @@
 #ifndef ACISM_H
 #define ACISM_H
 
+#ifdef __cplusplus
+#   define ENTER_C extern "C" {
+#   define LEAVE_C }
+#else
+#   define ENTER_C
+#   define LEAVE_C
+#endif
+
+ENTER_C
 // "acism" uses MEMREF {ptr,len} bytevec structs for "string" args,
 // rather than NUL-terminated "C" strings.
 
@@ -70,4 +79,5 @@ void acism_dump(ACISM const*, PS_DUMP_TYPE, FILE*, MEMREF const*pattv);
 
 #define ACISM_STATS 1   // Collect perf stats during acism_create (see acism_dump).
 
+LEAVE_C
 #endif//ACISM_H

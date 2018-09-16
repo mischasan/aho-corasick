@@ -303,8 +303,8 @@ _gen_result(int type, uint64_t got, uint64_t expected,
             break;
 
         case 4:
-            _diag("         got: %.*s", got_ptr ? (long)cmp : 0, (const char *)got_ptr);
-            _diag("    expected: %.*s", exp_ptr ? (long)cmp : 0, (const char *)exp_ptr);
+            _diag("         got: %.*s", got_ptr ? (int)(intptr_t)cmp : 0, (const char *)got_ptr);
+            _diag("    expected: %.*s", exp_ptr ? (int)(intptr_t)cmp : 0, (const char *)exp_ptr);
             break;
 
         case 5:

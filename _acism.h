@@ -35,7 +35,8 @@ typedef int (*qsort_cmp)(const void *, const void *);
 #elif __LONG_MAX__ == 2147483647L || defined(_LONG_LONG) || defined(__sun) // AIX 6.1 ...
 #   define F64      "ll"
 #else
-#   error need to define F64
+//XXX Assuming F64 is "ll" for VS
+#   define F64      "ll"
 #endif
 
 #ifndef ACISM_SIZE
@@ -57,6 +58,10 @@ typedef int (*qsort_cmp)(const void *, const void *);
 typedef uint16_t  SYMBOL;
 typedef unsigned _SYMBOL; // An efficient stacklocal SYMBOL
 
+#define BACK ((SYMBOL)0)
+#define ROOT ((STATE) 0)
+
+// MATCH and SUFFIX are the top 2 bits of a TRAN:
 enum { 
     IS_MATCH  = (TRAN)1 << (8*sizeof(TRAN) - 1),
     IS_SUFFIX = (TRAN)1 << (8*sizeof(TRAN) - 2),
@@ -64,8 +69,6 @@ enum {
 };
 
 typedef struct { STATE state; STRNO strno; } STRASH;
-
-typedef enum { BASE=2, USED=1 } USES;
 
 struct acism {
     TRAN*   tranv;
@@ -91,30 +94,21 @@ static inline unsigned p_size(ACISM const *psp)
 { return psp->hash_size * sizeof*psp->hashv
        + psp->tran_size * sizeof*psp->tranv; }
 
-static inline unsigned p_hash(ACISM const *psp, STATE s)
+static inline unsigned  p_hash(ACISM const *psp, STATE s)
     { return s * 107 % psp->hash_mod; }
 
 static inline void set_tranv(ACISM *psp, void *mem)
-    { psp->hashv = (STRASH*)&(psp->tranv = mem)[psp->tran_size]; }
+    { psp->hashv = (STRASH*)&(psp->tranv = (TRAN*)mem)[psp->tran_size]; }
 
 // TRAN accessors. For ACISM_SIZE=8, SYM_{BITS,MASK} do not use psp.
 
-static inline TRAN p_tran(ACISM const *psp, STATE s, _SYMBOL sym)
+static inline TRAN      p_tran(ACISM const *psp, STATE s, _SYMBOL sym)
     { return psp->tranv[s + sym] ^ sym; }
 
-static inline _SYMBOL t_sym(ACISM const *psp, TRAN t)
-    { (void)psp; return t & SYM_MASK; }
-
-static inline STATE t_next(ACISM const *psp, TRAN t)
-    { (void)psp; return (t & ~T_FLAGS) >> SYM_BITS; }
-
-static inline int t_isleaf(ACISM const *psp, TRAN t)
-    { return t_next(psp, t) >= psp->tran_size; }
-
-static inline int t_strno(ACISM const *psp, TRAN t)
-    { return t_next(psp, t) - psp->tran_size; }
-
-static inline _SYMBOL t_valid(ACISM const *psp, TRAN t)
-    { return !t_sym(psp, t); }
+static inline _SYMBOL t_sym(ACISM const *psp, TRAN t)    { (void)psp; return t & SYM_MASK; }
+static inline STATE   t_next(ACISM const *psp, TRAN t)   { (void)psp; return (t & ~T_FLAGS) >> SYM_BITS; }
+static inline int     t_isleaf(ACISM const *psp, TRAN t) { return t_next(psp, t) >= psp->tran_size; }
+static inline int     t_strno(ACISM const *psp, TRAN t)  { return t_next(psp, t) - psp->tran_size; }
+static inline _SYMBOL t_valid(ACISM const *psp, TRAN t)  { return !t_sym(psp, t); }
 
 #endif//_ACISM_H

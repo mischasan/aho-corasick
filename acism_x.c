@@ -4,21 +4,31 @@
 #include "tap.h"
 #include "acism.h"
 
+// Move this to common plat.h
+#if defined(_MSC_VER)
+#define _CRT_SECURE_NO_WARNINGS	1
+static FILE* FOPEN(char const*path, char const*mode)
+{
+    FILE* fp;  return fopen_s(&fp, path, mode) ? NULL : fp;
+}
+#else//not _MSC_VER
+#define FOPEN fopen
+#endif//_MSC_VER
+
 #ifdef ACISM_STATS
 typedef struct { long long val; const char *name; } PSSTAT;
 extern PSSTAT psstat[];
 extern int pscand[];
 #endif//ACISM_STATS
 
-static FILE *matchfp;
-static int actual = 0;
+static int actual = 0, details = 1;
 
 static int
 on_match(int strnum, int textpos, MEMREF const *pattv)
 {
     (void)strnum, (void)textpos, (void)pattv;
     ++actual;
-    if (matchfp) fprintf(matchfp, "%9d %7d '%.*s'\n", textpos, strnum, (int)pattv[strnum].len, pattv[strnum].ptr);
+    if (details) fprintf(stderr, "%9d %7d '%.*s'\n", textpos, strnum, (int)pattv[strnum].len, pattv[strnum].ptr);
     return 0;
 }
 
@@ -26,7 +36,7 @@ int
 main(int argc, char **argv)
 {
     if (argc < 2 || argc > 4)
-        usage("pattern_file [nmatches [match.log]]\n" "Creates acism.tmp");
+        usage("pattern_file target_file [[-]expected]\ne.g. acism_x patts act.txt -5");
 
     MEMBUF patt = chomp(slurp(argv[1]));
     if (!patt.ptr)
@@ -42,7 +52,7 @@ main(int argc, char **argv)
     plan_tests(argc < 3 ? 1 : 3);
 
     ok(psp, "acism_create(pattv[%d]) compiled, in %.3f secs", npatts, t);
-    acism_dump(psp, PS_STATS, stderr, pattv);
+    acism_dump(psp, PS_ALL, stderr, pattv);
 #ifdef ACISM_STATS
     {
     int i;
@@ -53,33 +63,32 @@ main(int argc, char **argv)
 #endif//ACISM_STATS
 
     diag("state machine saved as acism.tmp");
-    FILE *fp = fopen("acism.tmp", "w");
+    FILE *fp = FOPEN("acism.tmp", "w");
     acism_save(fp, psp);
     fclose(fp);
 
     if (argc > 2) {
-
-        int fd = open(argv[1], O_RDONLY);
-        if (fd < 0) return fprintf(stderr, "acism_x: %s: cannot open: %s\n", argv[2], strerror(errno));
-        
+        // Negative count => print match details
+        int expected = argc > 3 ? atoi(argv[3]) : 0;
+        int details = expected < 0;
+        if (details) expected = -expected;
+        FILE*	textfp = FOPEN(argv[2], "r");		// REUSE PATTERN FILE AS A TARGET
+        if (!fp) die("cannot open %s", argv[2]);
         static char buf[1024*1024];
-        MEMREF text = {buf, 0};
-        int state = 0;
-        double elapsed = 0, start = tick();
-        if (argc > 3) matchfp = fopen(argv[3], "w");
-        while (0 < (text.len = read(fd, buf, sizeof buf))) {
+        MEMREF		text = {buf, 0};
+        int			state = 0;
+        double		elapsed = 0, start = tick();
+        while (0 < (text.len = fread(buf, sizeof*buf, sizeof buf, textfp))) {
             t = tick();
             (void)acism_more(psp, text, (ACISM_ACTION*)on_match, pattv, &state);
             elapsed += tick() - t;
             putc('.', stderr);
         }
         putc('\n', stderr);
-        close(fd);
-        if (matchfp) fclose(matchfp);
+        fclose(textfp);
         ok(text.len == 0, "text_file scanned in 1M blocks; read(s) took %.3f secs", tick() - start - elapsed);
 
-        int expected = argc > 2 ? atoi(argv[2]) : actual;
-        if (!ok(actual == expected, "%d matches found, in %.3f secs", expected, elapsed))
+        if (!ok(actual == expected || expected == 0, "%d matches found, in %.3f secs", actual, elapsed))
             diag("actual: %d\n", actual);
     }
 

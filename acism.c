@@ -19,9 +19,6 @@
 
 #include "_acism.h"
 
-#define BACK ((SYMBOL)0)
-#define ROOT ((STATE) 0)
-
 int
 acism_more(ACISM const *psp, MEMREF const text,
            ACISM_ACTION *cb, void *context, int *statep)
@@ -85,7 +82,8 @@ acism_more(ACISM const *psp, MEMREF const text,
                     if ((ret = cb(strno, cp - text.ptr, context)))
                         goto EXIT;
                 }
-
+                // If the original match was a leaf, state was set to 0, to be set
+                //  The first node in the backref chain with a forward transition
                 if (!state && !t_isleaf(psp, next))
                     state = t_next(psp, next);
                 if ( state && !(next & IS_SUFFIX))

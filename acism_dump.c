@@ -28,6 +28,16 @@
 #   define FX   "l"
 #endif
 
+static void putb(FILE*out, int ch)   
+{
+    fprintf(out, isprint(ch) ? "'%c" : "%02.2X", ch);
+}
+
+static void putsym(FILE*out, int sym, char const*charv)
+{
+    if (sym) putb(out, charv[sym]); else fputs("--", out);
+}
+
 static void printrans(ACISM const*,TRAN,const char*,FILE*,MEMREF const*);
 static void printree(ACISM const* psp,
                         int state,
@@ -45,9 +55,9 @@ static void printree(ACISM const* psp,
 void
 acism_dump(ACISM const* psp, PS_DUMP_TYPE pdt, FILE *out, MEMREF const*pattv)
 {
-    int i, empty;
-    char charv[256];
-    int symdist[257] = {};
+    int         i, empty, sym, symdist[257] = { 0 };
+    char        charv[256];
+ 
     for (i = 256; --i >=0;) charv[psp->symv[i]] = i;
 
     if (pdt & PS_STATS) {
@@ -63,16 +73,23 @@ acism_dump(ACISM const* psp, PS_DUMP_TYPE pdt, FILE *out, MEMREF const*pattv)
                 (long)sizeof(ACISM) + p_size(psp));
     }
 
+    // For TRAN/HASH/TREE, print a symbol map (sym -> char/byte).
+    if (pdt & ~PS_STATS) {
+         for (i = 1; i < psp->nsyms; i++) {
+             fprintf(out, "  %u:", i); putsym(out, i, charv);
+         }
+         putc('\n', out);
+     }
+
     if (pdt & PS_TRAN) {
-        fprintf(out, "==== TRAN:\n%8s %8s Ch MS %8s\n", "Cell", "State", "Next");
+        fprintf(out, "==== TRAN:\n%8s %8s %3s Ch MS Ref\n", "Cell", "State", "Sym");
         for (i = 1; i < (int)psp->tran_size; ++i) {
-            fprintf(out, "%8d %8d ", i, i - t_sym(psp, psp->tranv[i]));
             printrans(psp, i, charv, out, pattv);
         }
     }
 
-    if (pdt & PS_HASH) {
-        fprintf(out, "==== HASH:\n.....: state strno\n");
+    if (pdt & PS_HASH && psp->hash_size) {
+        fprintf(out, "==== HASH:\n.....:   state strno\n");
         for (i = 0; i < (int)psp->hash_size; ++i) {
             STATE state = psp->hashv[i].state;
             if (state)
@@ -87,8 +104,9 @@ acism_dump(ACISM const* psp, PS_DUMP_TYPE pdt, FILE *out, MEMREF const*pattv)
 
     if (pdt & PS_TREE) {
         fprintf(out, "==== TREE:\n");
-        char str[psp->maxlen + 1];
+        char *str = (char*)malloc(psp->maxlen + 1);
         printree(psp, 0, 0, str, charv, out, pattv);
+        free(str);
     }
     //TODO: calculate stats: backref chain lengths ...
 }
@@ -100,30 +118,26 @@ printrans(ACISM const*psp, STATE s, char const *charv,
     (void)pattv;
     TRAN x = psp->tranv[s];
     if (!x) {
-        fprintf(out, "(empty)\n");
+        fprintf(out, "%8d (empty)\n", s);
         return;
     }
 
-    SYMBOL sym = t_sym(psp,x);
-    char c = charv[sym];
-
-    if (sym)
-	    fprintf(out, "--");
-    else
-        fprintf(out, "%02X ", c);
-
+    SYMBOL sym = t_sym(psp, x);
+    fprintf(out, "%8d %8d %3u ", s, s - sym, sym);
+    putsym(out, sym, charv);
+    putc(' ', out);
     putc("M-"[!(x & IS_MATCH)], out);
     putc("S-"[!(x & IS_SUFFIX)], out);
 
     STATE next = t_next(psp, x);
     if (t_isleaf(psp, x)) {
-        fprintf(out, " => %d\n", t_strno(psp, x));
+        fprintf(out, " str= %d\n", t_strno(psp, x));
     } else {
-        fprintf(out, " %7"FX"d", next);
+        fprintf(out, " %s %d", sym == 0 ? "back" : "next", next);
         if (x & IS_MATCH) {
             int i;
             for (i = p_hash(psp, s); psp->hashv[i].state != s; ++i);
-            fprintf(out, " #> %"FX"d", psp->hashv[i].strno);
+            fprintf(out, " str# %"FX"d", psp->hashv[i].strno);
         }
         putc('\n', out);
     }

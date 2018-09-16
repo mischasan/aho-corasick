@@ -28,33 +28,36 @@
 // or alternately, the sum of strv[].len values.
 
 #include "_acism.h"
+#ifdef _MSC_VER
+#   include <malloc.h>		// Unix alloca is declared in <unistd.h>
+#endif//_MSC_VER
 
-typedef struct { int *seqv; MEMREF *strp; char *data; } VISIT;
+typedef struct { MEMREF *strp; char *data; int seqv[256]; } VISIT;
 
-static void do(VISIT*, ACISM const *psp, TRAN base, int depth);
+static void visit(VISIT*, ACISM const *psp, TRAN base, int depth);
 
 MEMREF*
 acism_strings(ACISM const *psp, int *pnstrs)
 {
-    int seqv[psp->nsyms];
-    char *data = malloc(psp->nchars);
-    MEMREF *strv = malloc(psp->nstrs * sizeof*strv);
-    VISIT vt = { seqv, strv, data };
+    char*   data = malloc(psp->nchars);
+    MEMREF* strv = malloc(psp->nstrs * sizeof*strv);
+    VISIT   vt = { strv, data };
 
-    for (i = j = 0; i < 256; i++) if (psp->symv[i]) vt.seqv[j++] = i;
+    int     j;
+    for (int i = j = 0; i < 256; i++) if (psp->symv[i]) vt.seqv[j++] = i;
     vt.seqv[j] = 0;
 
-    do(&vt, psp, 0, 0);
+    visit(&vt, psp, 0, 0);
 
     *pnstrs = psp->nstrs;
     return strv;
 }
 
 static void
-do(VISIT *vp, ACISM const *psp, TRAN base, int depth)
+visit(VISIT *vp, ACISM const *psp, TRAN base, int depth)
 {
-    for (i = 0; i < psp->nsyms; ++i) {
-        TRAN t = t_trans(psp, base, seqv[i]);
+    for (int i = 0; i < psp->nsyms; ++i) {
+        TRAN t = t_trans(psp, base, vp->seqv[i]);
         if (!t_valid(psp, t))
             continue;
         //XXX do something!

@@ -110,7 +110,9 @@ die(char const *fmt, ...)
 {
     va_list	vargs;
     va_start(vargs, fmt);
+#ifdef XXX
     if (*fmt == ':') fputs(getprogname(), stderr);
+#endif//XXX
     vfprintf(stderr, fmt, vargs);
     va_end(vargs);
     if (fmt[strlen(fmt)-1] == ':')
@@ -126,6 +128,9 @@ getprogname(void)
     static char *progname;
 
     if (!progname) {
+#       ifdef _MSC_VER
+        char*   buf = __argv[0];
+#       else
         char    buf[999];
         int     len;
         sprintf(buf, "/proc/%d/exe", getpid());
@@ -133,6 +138,7 @@ getprogname(void)
         if (len < 0 || len == sizeof(buf))
             return NULL;
         buf[len] = 0;
+#       endif//_MSC_VER
         char    *cp = strrchr(buf, '/');
         progname = strdup(cp ? cp + 1 : buf);
     }
@@ -175,12 +181,15 @@ slurp(const char *filename)
     struct stat s;
     if (fd < 0 || fstat(fd, &s))
         goto ERROR;
-
+#ifdef XXX
     if (S_ISREG(s.st_mode)) {
+#endif
         ret = membuf(s.st_size);
-	if (ret.len != (unsigned)read(fd, ret.ptr, ret.len))
+        int nbytes = read(fd, ret.ptr, ret.len);
+	    if (nbytes < 0)     // may be less than ret.len if Win does \r\n -> \n
             goto ERROR;
-
+        ret.len = nbytes;
+#ifdef XXX
     } else {
         int     len, size = 4096;
         ret.ptr = malloc(size + 1);
@@ -191,7 +200,7 @@ slurp(const char *filename)
             goto ERROR;
         ret.ptr = realloc(ret.ptr, ret.len + 1);
     }
-
+#endif//XXX
     close(fd);
     ret.ptr[ret.len] = 0;
     return  ret;
@@ -204,14 +213,21 @@ ERROR:
 
 double tick(void)
 {
+#ifndef _MSC_VER
     struct timeval t;
     gettimeofday(&t, 0);
     return t.tv_sec + 1E-6 * t.tv_usec;
+#else
+    return 0;
+#endif//_MSC_VER
+       
 }
 
 void
 usage(char const *str)
 {
+#ifdef XXX
     fprintf(stderr, "Usage: %s %s\n", getprogname(), str);
+#endif//XXX
     _exit(2);
 }
