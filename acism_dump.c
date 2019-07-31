@@ -55,7 +55,7 @@ static void printree(ACISM const* psp,
 void
 acism_dump(ACISM const* psp, PS_DUMP_TYPE pdt, FILE *out, MEMREF const*pattv)
 {
-    int         i, empty, sym, symdist[257] = { 0 };
+    int         i, empty, symdist[257] = { 0 };
     char        charv[256];
  
     for (i = 256; --i >=0;) charv[psp->symv[i]] = i;
@@ -75,7 +75,7 @@ acism_dump(ACISM const* psp, PS_DUMP_TYPE pdt, FILE *out, MEMREF const*pattv)
 
     // For TRAN/HASH/TREE, print a symbol map (sym -> char/byte).
     if (pdt & ~PS_STATS) {
-         for (i = 1; i < psp->nsyms; i++) {
+         for (i = 1; i < (int)psp->nsyms; i++) {
              fprintf(out, "  %u:", i); putsym(out, i, charv);
          }
          putc('\n', out);
