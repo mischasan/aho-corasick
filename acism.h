@@ -29,6 +29,12 @@
 #endif
 
 ENTER_C
+
+// VS2013 does not have "inline". Per https://github.com/PerMagnusH
+#ifdef  _MSC_VER
+#   define inline __inline
+#endif//_MSC_VER
+
 // "acism" uses MEMREF {ptr,len} bytevec structs for "string" args,
 // rather than NUL-terminated "C" strings.
 
