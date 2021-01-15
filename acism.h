@@ -32,6 +32,7 @@ ENTER_C
 
 // VS2013 does not have "inline". Per https://github.com/PerMagnusH
 #ifdef  _MSC_VER
+#   undef  inline
 #   define inline __inline
 #endif//_MSC_VER
 
