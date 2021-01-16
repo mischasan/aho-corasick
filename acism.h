@@ -31,9 +31,11 @@
 ENTER_C
 
 // VS2013 does not have "inline". Per https://github.com/PerMagnusH
+#   undef  INLINE_
 #ifdef  _MSC_VER
-#   undef  inline
-#   define inline __inline
+#   define INLINE_ __inline
+#else
+#   define INLINE_ inline
 #endif//_MSC_VER
 
 // "acism" uses MEMREF {ptr,len} bytevec structs for "string" args,
@@ -65,7 +67,7 @@ typedef int (ACISM_ACTION)(int strnum, int textpos, void *context);
 int acism_more(ACISM const*, MEMREF const text,
                  ACISM_ACTION *fn, void *fndata, int *state);
 
-static inline int acism_scan(ACISM const*psp, MEMREF const text,
+static INLINE_ int acism_scan(ACISM const*psp, MEMREF const text,
                                ACISM_ACTION *fn, void *fndata)
 {
     int state = 0;
