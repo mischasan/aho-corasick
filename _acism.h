@@ -90,25 +90,25 @@ struct acism {
 #include "acism.h"
 
 // p_size: size of tranv + hashv
-static inline size_t p_size(ACISM const *psp)
+static INLINE_ size_t p_size(ACISM const *psp)
 { return psp->hash_size * sizeof*psp->hashv
        + psp->tran_size * sizeof*psp->tranv; }
 
-static inline unsigned  p_hash(ACISM const *psp, STATE s)
+static INLINE_ unsigned  p_hash(ACISM const *psp, STATE s)
     { return s * 107 % psp->hash_mod; }
 
-static inline void set_tranv(ACISM *psp, void *mem)
+static INLINE_ void set_tranv(ACISM *psp, void *mem)
     { psp->hashv = (STRASH*)&(psp->tranv = (TRAN*)mem)[psp->tran_size]; }
 
 // TRAN accessors. For ACISM_SIZE=8, SYM_{BITS,MASK} do not use psp.
 
-static inline TRAN      p_tran(ACISM const *psp, STATE s, _SYMBOL sym)
+static INLINE_ TRAN      p_tran(ACISM const *psp, STATE s, _SYMBOL sym)
     { return psp->tranv[s + sym] ^ sym; }
 
-static inline _SYMBOL t_sym(ACISM const *psp, TRAN t)    { (void)psp; return t & SYM_MASK; }
-static inline STATE   t_next(ACISM const *psp, TRAN t)   { (void)psp; return (t & ~T_FLAGS) >> SYM_BITS; }
-static inline int     t_isleaf(ACISM const *psp, TRAN t) { return t_next(psp, t) >= psp->tran_size; }
-static inline int     t_strno(ACISM const *psp, TRAN t)  { return t_next(psp, t) - psp->tran_size; }
-static inline _SYMBOL t_valid(ACISM const *psp, TRAN t)  { return !t_sym(psp, t); }
+static INLINE_ _SYMBOL t_sym(ACISM const *psp, TRAN t)    { (void)psp; return t & SYM_MASK; }
+static INLINE_ STATE   t_next(ACISM const *psp, TRAN t)   { (void)psp; return (t & ~T_FLAGS) >> SYM_BITS; }
+static INLINE_ int     t_isleaf(ACISM const *psp, TRAN t) { return t_next(psp, t) >= psp->tran_size; }
+static INLINE_ int     t_strno(ACISM const *psp, TRAN t)  { return t_next(psp, t) - psp->tran_size; }
+static INLINE_ _SYMBOL t_valid(ACISM const *psp, TRAN t)  { return !t_sym(psp, t); }
 
 #endif//_ACISM_H
